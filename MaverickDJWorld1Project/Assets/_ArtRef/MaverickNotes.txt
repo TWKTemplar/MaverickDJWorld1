@@ -1,0 +1,30 @@
+VRC FUNCTIONS (01/25/2022)
+
+Goggles that are equipable (but not shown on avatar) w/ toggleable menu, screen wipe visual, sound effect. Toggleable menu will only be accessible after button press when goggles have been equipped.
+Map w/ player movement on screen 
+FAQ document
+As much Discord functionality as we can get
+Screen with streaming capabilities
+Menu icon 
+Fingerprint scanner w/ proximity 
+Locked rooms with manual name whitelist, ineligible users get turrets pointed at them
+Cinematic camera or fixed cameras to use for streams
+Visuals reactive to audio?? Colors based off of video?
+
+
+DESIGN ELEMENT FOCUSES
+Fantasy setting with extreme weather (windy sand) and desert exterior
+Cold, steel blue vault door and underground Fallout + Warframe inspired shelter, repurposed to be a living space
+Private rooms connected to Discord roles (we’ll figure out details, but likely manual integration)
+Design focus is a mix of dystopian and run-down, but futuristic / tech space
+Polish, quality of life graphics / features and smoothness during gameplay are the top priorities. 
+Some variation of an apartment room / bedroom with the same theme would be great; as much as we want to focus on the event space itself, we also want to make sure this is an area people come back to on their own. Mirror placement is also insanely important here, make sure to keep at least one nearby the main stage area.
+Spots for basic flyers but only around main event space, to not take away from the vault scene / look
+Lighting and colors gotta be on point af, UI for goggles could emulate existing smart goggles
+Any sound effects or ambiance I can handle as we move along
+
+References: Warframe (colors, tech, textures); Fallout (vault features, dilapidated details); Star Wars (sandy fantasy setting, movie-like colors and views)
+
+1-25-2022
+Some light homework if both of you have time in between next call - Oni, if you have any ideas for additional quality of life or cool setting-appropriate add-ins (anything from a type of robot, to a separate smaller outdoor unit for a specific purpose, or even smaller objects like particular doors or panels, etc) you can just drop em in and we can add em to the Functions list. Templar - any additional references you can find for futuristic interior settings would be great to have, and if any of your contacts have worked with lighting systems in particular we could use their help during the layout process to best place the lights while we construct the rooms. 
+Gotta make sure we can keep hangout spots open in as many areas as we can 
