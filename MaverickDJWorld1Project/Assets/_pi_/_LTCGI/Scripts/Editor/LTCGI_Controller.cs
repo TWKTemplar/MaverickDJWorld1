@@ -11,6 +11,8 @@ using UnityEditor;
 using UnityEngine;
 using UdonSharp;
 using UdonSharpEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 #endif
 
 namespace pi.LTCGI
@@ -20,14 +22,14 @@ namespace pi.LTCGI
     [System.Serializable]
     public partial class LTCGI_Controller : MonoBehaviour
     {
-        const int MAX_SOURCES = 16;
+        internal const int MAX_SOURCES = 16;
 
         [Tooltip("Intensity is set for each screen. Can be a RenderTexture for realtime updates (video players).")]
         public Texture VideoTexture;
         [Tooltip("Static textures are precomputed and *must* all be the same size. Make sure to click 'Precompute Static Textures' after any changes.")]
         public Texture2D[] StaticTextures;
         [Tooltip("Renderers that may change material during runtime. Otherwise only 'sharedMaterial's are updated for performance reasons.")]
-        public MeshRenderer[] DynamicRenderers;
+        public Renderer[] DynamicRenderers;
 
         [Header("Expert Settings")]
         [Tooltip("Do not automatically set up the blur chain. Use this if you use AVPro to set _MainTex on the LOD1 material for example.")]
@@ -37,7 +39,7 @@ namespace pi.LTCGI
         public float LightmapIntensity = 4.0f;
 
         [Tooltip("Multiply lightmap with this before applying to diffuse. Useful if you have multiple lights next to each other sharing a channel.")]
-        public Vector3 LightmapMultiplier = Vector3.one;
+        public Vector3 LightmapMultiplier = new Vector4(0.25f, 0.25f, 0.25f, 0.25f);
 
         [Header("Internal Settings")]
         public Texture2D DefaultLightmap;
@@ -47,29 +49,45 @@ namespace pi.LTCGI
 
         public static LTCGI_Controller Singleton;
 
-        private static MeshRenderer[] cachedMeshRenderers;
-        private static Vector4[] _LTCGI_Vertices_0, _LTCGI_Vertices_1, _LTCGI_Vertices_2, _LTCGI_Vertices_3;
-        private static Vector4[] _LTCGI_Vertices_0t, _LTCGI_Vertices_1t, _LTCGI_Vertices_2t, _LTCGI_Vertices_3t;
-        private static Transform[] _LTCGI_ScreenTransforms;
-        private static Vector4[] _LTCGI_ExtraData;
-        private static Vector4 _LTCGI_LightmapMult;
+        [NonSerialized] internal Renderer[] cachedMeshRenderers;
+        [NonSerialized] private Vector4[] _LTCGI_Vertices_0, _LTCGI_Vertices_1, _LTCGI_Vertices_2, _LTCGI_Vertices_3;
+        [NonSerialized] private Vector4[] _LTCGI_Vertices_0t, _LTCGI_Vertices_1t, _LTCGI_Vertices_2t, _LTCGI_Vertices_3t;
+        [NonSerialized] internal Transform[] _LTCGI_ScreenTransforms;
+        [NonSerialized] private Vector4[] _LTCGI_ExtraData;
+        [NonSerialized] private Vector4 _LTCGI_LightmapMult;
+        [NonSerialized] private Vector2[][] _LTCGI_UVs;
 
         private Texture2DArray[] _LTCGI_LOD_arrays;
 
         public void OnEnable()
         {
             if (PrefabUtility.IsPartOfPrefabAsset(this.gameObject)) return;
-            if (Singleton == null)
+            if (Singleton == null || Singleton != this)
             {
                 if (PrefabUtility.IsPartOfPrefabInstance(this.gameObject))
                     PrefabUtility.UnpackPrefabInstance(this.gameObject, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
-                Debug.Log("LTCGI Controller Singleton initialized");
                 Singleton = this;
+                Undo.undoRedoPerformed += this.UpdateMaterials;
+                Debug.Log("LTCGI Controller Singleton initialized");
+
+                var ctrls = GameObject.FindObjectsOfType<LTCGI_Controller>().Length;
+                if (ctrls > 1)
+                {
+                    Debug.LogError("There must only be one LTCGI Controller per scene!");
+                }
             }
-            else if (Singleton != this)
+
+            var pathToScript = GetCurrentFileName();
+            if (!pathToScript.EndsWith(Path.Combine("Assets", "_pi_", "_LTCGI", "Scripts", "Editor", "LTCGI_Controller.cs")))
             {
-                Debug.LogError("There must only be one LTCGI Controller per project!");
+                Debug.LogError("Invalid script path: " + pathToScript);
+                EditorUtility.DisplayDialog("LTCGI", "ERROR: Wrong path to 'LTCGI_Controller.cs' detected. Please do *not* move the LTCGI folder! Try reimporting the LTCGI package to fix.", "OK");
             }
+        }
+
+        private string GetCurrentFileName([System.Runtime.CompilerServices.CallerFilePath] string fileName = null)
+        {
+            return fileName;
         }
 
         public static bool MatLTCGIenabled(Material mat)
@@ -126,6 +144,7 @@ namespace pi.LTCGI
                 _LTCGI_Vertices_3t = new Vector4[MAX_SOURCES];
                 _LTCGI_ExtraData = new Vector4[MAX_SOURCES];
                 _LTCGI_ScreenTransforms = new Transform[MAX_SOURCES];
+                _LTCGI_UVs = new Vector2[MAX_SOURCES][];
             }
 
             // construct data
@@ -147,30 +166,37 @@ namespace pi.LTCGI
                 if (fast && screen != null && s != screen) continue;
 
                 _LTCGI_ScreenTransforms[i] = s.transform;
-                if (s.Cylinder)
+                LTCGI_Emitter emitter;
+                if ((emitter = s as LTCGI_Emitter) != null)
+                {
+                    _LTCGI_Vertices_0[i] = _LTCGI_Vertices_1[i] = _LTCGI_Vertices_2[i] = _LTCGI_Vertices_3[i] = Vector4.zero;
+                    _LTCGI_Vertices_0[i].w = s.SingleUV.x;
+                    _LTCGI_Vertices_1[i].w = s.SingleUV.y;
+                }
+                else if (s.Cylinder)
                 {
                     // Experimental!
                     _LTCGI_Vertices_0[i] = new Vector4(
                         s.CylinderBase.x,
-                        s.CylinderBase.y,
+                        s.CylinderBase.y * 2,
                         s.CylinderBase.z,
-                        s.CylinderHeight
+                        s.CylinderHeight * 2
                     );
                     _LTCGI_Vertices_1[i] = new Vector4(
                         s.CylinderBase.x,
-                        s.CylinderBase.y,
+                        s.CylinderBase.y * 2,
                         s.CylinderBase.z,
                         s.CylinderRadius
                     );
                     _LTCGI_Vertices_2[i] = new Vector4(
                         s.CylinderBase.x,
-                        s.CylinderBase.y,
+                        s.CylinderBase.y * 2,
                         s.CylinderBase.z,
                         s.CylinderSize
                     );
                     _LTCGI_Vertices_3[i] = new Vector4(
                         s.CylinderBase.x,
-                        s.CylinderBase.y,
+                        s.CylinderBase.y * 2,
                         s.CylinderBase.z,
                         s.CylinderAngle
                     );
@@ -178,20 +204,41 @@ namespace pi.LTCGI
                 else
                 {
                     var mf = s.GetComponent<MeshFilter>();
+                    if (mf.sharedMesh == null) continue;
                     if (!fast)
                     {
                         SetMeshImporterFormat(mf.sharedMesh, true);
                     }
-                    if (mf.sharedMesh.vertexCount != 4)
+                    var mesh = mf.sharedMesh;
+                    if (mesh.vertexCount != 4 && mesh.vertexCount != 3)
                     {
                         if (fast) return;
-                        throw new Exception($"Mesh on '{s.gameObject.name}' does not have 4 vertices ({mf.sharedMesh.vertexCount})");
+                        throw new Exception($"Mesh on '{s.gameObject.name}' does not have 3 or 4 vertices ({mesh.vertexCount})");
                     }
-                    var verts = mf.sharedMesh.vertices;
-                    _LTCGI_Vertices_0[i] = new Vector4(verts[0].x, verts[0].y, verts[0].z, mf.sharedMesh.uv[0].x);
-                    _LTCGI_Vertices_1[i] = new Vector4(verts[1].x, verts[1].y, verts[1].z, mf.sharedMesh.uv[0].y);
-                    _LTCGI_Vertices_2[i] = new Vector4(verts[2].x, verts[2].y, verts[2].z, mf.sharedMesh.uv[3].x);
-                    _LTCGI_Vertices_3[i] = new Vector4(verts[3].x, verts[3].y, verts[3].z, mf.sharedMesh.uv[3].y);
+
+                    if (mf.sharedMesh.vertexCount == 3)
+                    {
+                        // extend triangle to virtual quad
+                        mesh = Instantiate(mesh);
+                        mesh.vertices = new Vector3[] {
+                            mesh.vertices[0],
+                            mesh.vertices[1],
+                            mesh.vertices[2],
+                            mesh.vertices[2],
+                        };
+                        mesh.uv = new Vector2[] {
+                            mesh.uv[0],
+                            mesh.uv[1],
+                            mesh.uv[2],
+                            mesh.uv[2],
+                        };
+                    }
+
+                    var verts = mesh.vertices;
+                    _LTCGI_Vertices_0[i] = new Vector4(verts[0].x, verts[0].y, verts[0].z, mesh.uv[0].x);
+                    _LTCGI_Vertices_1[i] = new Vector4(verts[1].x, verts[1].y, verts[1].z, mesh.uv[0].y);
+                    _LTCGI_Vertices_2[i] = new Vector4(verts[2].x, verts[2].y, verts[2].z, mesh.uv[3].x);
+                    _LTCGI_Vertices_3[i] = new Vector4(verts[3].x, verts[3].y, verts[3].z, mesh.uv[3].y);
 
                     var angle = Vector3.Dot(
                         new Vector3(_LTCGI_Vertices_1[i].x, _LTCGI_Vertices_1[i].y, _LTCGI_Vertices_1[i].z) -
@@ -211,16 +258,53 @@ namespace pi.LTCGI
                         _LTCGI_Vertices_1[i] = v3;
                         _LTCGI_Vertices_2[i] = v1;
                         _LTCGI_Vertices_3[i] = v2;
-                        _LTCGI_Vertices_0[i].w = mf.sharedMesh.uv[0].x * flip;
-                        _LTCGI_Vertices_1[i].w = mf.sharedMesh.uv[0].y;
-                        _LTCGI_Vertices_2[i].w = mf.sharedMesh.uv[2].x * flip;
-                        _LTCGI_Vertices_3[i].w = mf.sharedMesh.uv[2].y;
+                        _LTCGI_Vertices_0[i].w = mesh.uv[0].x * flip;
+                        _LTCGI_Vertices_1[i].w = mesh.uv[0].y;
+                        _LTCGI_Vertices_2[i].w = mesh.uv[2].x * flip;
+                        _LTCGI_Vertices_3[i].w = mesh.uv[2].y;
+
+                        if (s.FlipUV)
+                        {
+                            _LTCGI_UVs[i] = new Vector2[]
+                            {
+                                // TODO: is this required? if so, implement it. for now, no-op.
+                                mesh.uv[0],
+                                mesh.uv[3],
+                                mesh.uv[1],
+                                mesh.uv[2],
+                            };
+                        }
+                        else
+                        {
+                            _LTCGI_UVs[i] = new Vector2[]
+                            {
+                                mesh.uv[0],
+                                mesh.uv[3],
+                                mesh.uv[1],
+                                mesh.uv[2],
+                            };
+                        }
+                    }
+                    else
+                    {
+                        _LTCGI_UVs[i] = new Vector2[]
+                        {
+                            mesh.uv[0],
+                            mesh.uv[1],
+                            mesh.uv[2],
+                            mesh.uv[3],
+                        };
                     }
 
                     if (s.ColorMode == ColorMode.SingleUV)
                     {
                         _LTCGI_Vertices_0[i].w = s.SingleUV.x;
                         _LTCGI_Vertices_1[i].w = s.SingleUV.y;
+                    }
+
+                    if (mf.sharedMesh.vertexCount == 3)
+                    {
+                        DestroyImmediate(mesh);
                     }
                 }
 
@@ -247,6 +331,8 @@ namespace pi.LTCGI
                 flags |= ((uint)s.ColorMode & 0x3) << 8;
                 flags |= ((uint)s.LightmapChannel & 0x3) << 10;
                 if (s.Cylinder) flags |= (1<<12);
+                flags |= ((uint)s.AudioLinkBand & 0x3) << 13;
+                if (s is LTCGI_Emitter) flags |= (1<<15); // TODO: can this be set based on other flags?
 
                 var col = s.enabled && s.gameObject.activeInHierarchy ? s.Color : Color.black;
                 float fflags = BitConverter.ToSingle(BitConverter.GetBytes(flags), 0);
@@ -272,8 +358,8 @@ namespace pi.LTCGI
             if (!fast || cachedMeshRenderers == null)
             {
                 // get all affected renderers
-                var allRenderers = Component.FindObjectsOfType<MeshRenderer>();
-                var renderers = new List<MeshRenderer>();
+                var allRenderers = Component.FindObjectsOfType<Renderer>();
+                var renderers = new List<Renderer>();
                 foreach (var r in allRenderers)
                 {
                     foreach (var mat in r.sharedMaterials)
@@ -302,12 +388,13 @@ namespace pi.LTCGI
             // find precomputed static textures
             if (!fast)
             {
+                var curscene = EditorSceneManager.GetActiveScene().name;
                 _LTCGI_LOD_arrays = new Texture2DArray[4];
                 for (int lod = 0; lod < 4; lod++)
                 {
                     try
                     {
-                        _LTCGI_LOD_arrays[lod] = AssetDatabase.LoadAssetAtPath<Texture2DArray>("Assets/_pi_/_LTCGI/Generated/lod" + lod + ".asset");
+                        _LTCGI_LOD_arrays[lod] = AssetDatabase.LoadAssetAtPath<Texture2DArray>("Assets/_pi_/_LTCGI/Generated/lod-" + curscene + "-" + lod + ".asset");
                         if (_LTCGI_LOD_arrays[lod] == null) throw new Exception();
                     }
                     catch
@@ -317,6 +404,9 @@ namespace pi.LTCGI
                     }
                 }
             }
+
+            // write out uniforms into data texture
+            var staticUniformTex = WriteStaticUniform(screens, fast);
 
             for (int i = 0; i < cachedMeshRenderers.Length; i++)
             {
@@ -387,6 +477,8 @@ namespace pi.LTCGI
                         prop.SetVectorArray("_LTCGI_Vertices_1", _LTCGI_Vertices_1t);
                         prop.SetVectorArray("_LTCGI_Vertices_2", _LTCGI_Vertices_2t);
                         prop.SetVectorArray("_LTCGI_Vertices_3", _LTCGI_Vertices_3t);
+                        if (staticUniformTex != null)
+                            prop.SetTexture("_LTCGI_static_uniforms", staticUniformTex);
                         prop.SetVectorArray("_LTCGI_ExtraData", _LTCGI_ExtraData);
                         prop.SetVector("_LTCGI_LightmapMult", _LTCGI_LightmapMult);
                         prop.SetFloatArray("_LTCGI_Mask", GetMaskForRenderer(screens, r));
@@ -497,6 +589,7 @@ namespace pi.LTCGI
                 adapter._LTCGI_Vertices_2 = _LTCGI_Vertices_2;
                 adapter._LTCGI_Vertices_3 = _LTCGI_Vertices_3;
                 adapter._LTCGI_ExtraData = _LTCGI_ExtraData;
+                adapter._LTCGI_static_uniforms = staticUniformTex;
                 adapter._LTCGI_ScreenCount = screens.Length;
                 adapter._LTCGI_ScreenCountDynamic = screens.TakeWhile(x => x.Dynamic).Count();
                 adapter._LTCGI_ScreenCountMasked = 
@@ -508,13 +601,14 @@ namespace pi.LTCGI
 
                 // calculate which renderers can use the shared material update method
                 var dynr = DynamicRenderers.ToList();
-                var mats = new Dictionary<Material, (int, float[], MeshRenderer)>();
+                var mats = new Dictionary<Material, (int, float[], Renderer)>();
                 for (int i = 0; i < cachedMeshRenderers.Length; i++)
                 {
-                    MeshRenderer r = cachedMeshRenderers[i];
+                    var r = cachedMeshRenderers[i];
                     if (IsEditorOnly(r.gameObject)) continue;
                     foreach (var m in r.sharedMaterials)
                     {
+                        if (m == null) continue;
                         var data = (adapter._LTCGI_ScreenCountMasked[i], adapter._LTCGI_Mask[i], r);
                         if (mats.ContainsKey(m))
                         {
@@ -552,6 +646,81 @@ namespace pi.LTCGI
             #if DEBUG_LOG
                 Debug.Log("LTCGI: update done!");
             #endif
+        }
+
+        private Texture2D WriteStaticUniform(LTCGI_Screen[] screens, bool fast)
+        {
+            var curscene = EditorSceneManager.GetActiveScene().name;
+            var path = @"Assets\_pi_\_LTCGI\Generated\StaticUniform-" + curscene + ".exr";
+
+            if (fast)
+            {
+                return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            }
+
+            var tex = new Texture2D(6, MAX_SOURCES, UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_SFloat, UnityEngine.Experimental.Rendering.TextureCreationFlags.None);
+            for (int i = 0; i < MAX_SOURCES; i++)
+            {
+                if (i >= screens.Length)
+                {
+                    for (int w = 0; w < tex.width; w++)
+                    {
+                        tex.SetPixel(w, i, Color.black);
+                    }
+                }
+                else
+                {
+                    tex.SetPixel(0, i, (Color)_LTCGI_Vertices_0t[i]);
+                    tex.SetPixel(1, i, (Color)_LTCGI_Vertices_1t[i]);
+                    tex.SetPixel(2, i, (Color)_LTCGI_Vertices_2t[i]);
+                    tex.SetPixel(3, i, (Color)_LTCGI_Vertices_3t[i]);
+                    if (_LTCGI_UVs[i] != null && _LTCGI_UVs[i].Length == 4)
+                    {
+                        tex.SetPixel(4, i, (Color)new Vector4(
+                            _LTCGI_UVs[i][0].x, _LTCGI_UVs[i][0].y, _LTCGI_UVs[i][1].x, _LTCGI_UVs[i][1].y));
+                        tex.SetPixel(5, i, (Color)new Vector4(
+                            _LTCGI_UVs[i][2].x, _LTCGI_UVs[i][2].y, _LTCGI_UVs[i][3].x, _LTCGI_UVs[i][3].y));
+                    }
+                }
+            }
+
+            tex.Apply();
+
+            if (!AssetDatabase.IsValidFolder("Assets/_pi_/_LTCGI/Generated"))
+                AssetDatabase.CreateFolder("Assets/_pi_/_LTCGI", "Generated");
+            var exr = tex.EncodeToEXR(Texture2D.EXRFlags.OutputAsFloat);
+
+            var existed = File.Exists(path);
+            byte[] prev = new byte[0];
+            if (existed)
+            {
+                prev = File.ReadAllBytes(path);
+            }
+
+            File.WriteAllBytes(path, exr);
+            AssetDatabase.Refresh();
+            
+            var asset = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            string assetPath = AssetDatabase.GetAssetPath(asset);
+            var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            if (importer != null && (!prev.SequenceEqual(exr) || importer.npotScale != TextureImporterNPOTScale.None))
+            {
+                importer.mipmapEnabled = false;
+                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                importer.crunchedCompression = false;
+                importer.sRGBTexture = false;
+                importer.maxTextureSize = 8192;
+                importer.alphaSource = TextureImporterAlphaSource.FromInput;
+                importer.alphaIsTransparency = true;
+                importer.npotScale = TextureImporterNPOTScale.None;
+                importer.SaveAndReimport();
+            }
+
+            #if DEBUG_LOG
+                Debug.Log("LTCGI: updated static uniform declarations");
+            #endif
+
+            return asset;
         }
 
 

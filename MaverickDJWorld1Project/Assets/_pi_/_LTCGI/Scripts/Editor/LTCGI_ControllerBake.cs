@@ -25,7 +25,7 @@ namespace pi.LTCGI
         [SerializeField] private LightmapsMode prevLightmapMode;
 
         [SerializeField] private Texture2D[] _LTCGI_Lightmaps;
-        [SerializeField] private MeshRenderer[] _LTCGI_LightmapData_key;
+        [SerializeField] private Renderer[] _LTCGI_LightmapData_key;
         [SerializeField] private Vector4[] _LTCGI_LightmapOffsets_val;
         [SerializeField] private int[] _LTCGI_LightmapIndex_val;
 
@@ -63,7 +63,7 @@ namespace pi.LTCGI
             bakeMaterialReset_val = new List<MaterialGlobalIlluminationFlags>();
 
             // disable all other contributors
-            var allRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
+            var allRenderers = GameObject.FindObjectsOfType<Renderer>();
             foreach (var renderer in allRenderers)
             {
                 foreach (var m in renderer.sharedMaterials)
@@ -100,6 +100,7 @@ namespace pi.LTCGI
             var allBakeryLights =
                 GameObject.FindObjectsOfType<BakerySkyLight>().Select(x => x.gameObject)
                 .Concat(GameObject.FindObjectsOfType<BakeryPointLight>().Select(x => x.gameObject))
+                .Concat(GameObject.FindObjectsOfType<BakeryLightMesh>().Select(x => x.gameObject))
                 .Concat(GameObject.FindObjectsOfType<BakeryDirectLight>().Select(x => x.gameObject));
             foreach (var light in allBakeryLights)
             {
@@ -141,33 +142,42 @@ namespace pi.LTCGI
                 mat.doubleSidedGI = true; // scr.DoubleSided ??
                 mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
 
-                var rend = scr.gameObject.GetComponent<MeshRenderer>();
-                var flags = GameObjectUtility.GetStaticEditorFlags(scr.gameObject);
-                var r = resetter(scr.gameObject);
-                r.ResetData = true;
-                r.Materials = rend.sharedMaterials;
-                r.Flags = flags;
-                r.ShadowCastingMode = rend.shadowCastingMode;
-                //#if !BAKERY_INCLUDED
-                if (rend.shadowCastingMode == ShadowCastingMode.Off || rend.shadowCastingMode == ShadowCastingMode.ShadowsOnly)
+                Action<Renderer> handleRenderer = (rend) => {
+                    var flags = GameObjectUtility.GetStaticEditorFlags(rend.gameObject);
+                    var r = resetter(rend.gameObject);
+                    r.ResetData = true;
+                    r.Materials = rend.sharedMaterials;
+                    r.Flags = flags;
+                    r.ShadowCastingMode = rend.shadowCastingMode;
+                    if (rend.shadowCastingMode == ShadowCastingMode.Off || rend.shadowCastingMode == ShadowCastingMode.ShadowsOnly)
+                    {
+                        rend.shadowCastingMode = ShadowCastingMode.On;
+                    }
+                    rend.sharedMaterials = new Material[] { mat };
+                    GameObjectUtility.SetStaticEditorFlags(rend.gameObject, flags | StaticEditorFlags.ContributeGI);
+                };
+
+                LTCGI_Emitter emitter;
+                if ((emitter = scr as LTCGI_Emitter) != null)
                 {
-                    rend.shadowCastingMode = ShadowCastingMode.On;
+                    foreach (var rend in emitter.EmissiveRenderers)
+                    {
+                        handleRenderer(rend);
+                    }
                 }
-                //#endif
-                rend.sharedMaterials = new Material[] { mat };
-                GameObjectUtility.SetStaticEditorFlags(scr.gameObject, flags | StaticEditorFlags.ContributeGI);
-                // #if BAKERY_INCLUDED
-                // r.RemoveBakeryLightMesh = true;
-                // var lmesh = scr.gameObject.AddComponent<BakeryLightMesh>();
-                // //lmesh.selfShadow = false;
-                // lmesh.color = col;
-                // lmesh.intensity = 2;
-                // #endif
+                else
+                {
+                    var rend = scr.gameObject.GetComponent<MeshRenderer>();
+                    handleRenderer(rend);
+                }
             }
 
             bakeInProgress = true;
             EditorSceneManager.SaveOpenScenes();
             EditorUtility.ClearProgressBar();
+
+            if (!AssetDatabase.IsValidFolder("Assets/_pi_/_LTCGI/Generated"))
+                AssetDatabase.CreateFolder("Assets/_pi_/_LTCGI", "Generated");
 
             /*prevLightmapData = Lightmapping.lightingDataAsset;
             Lightmapping.lightingDataAsset = null;
@@ -257,59 +267,60 @@ namespace pi.LTCGI
         private static void BakeCompleteEvent(object a, EventArgs b) => BakeCompleteEvent();
         internal void BakeComplete()
         {
+            try
+            {
+                BakeCompleteProg();
+            }
+            finally
+            {
+                // avoid stuck progress bar
+                EditorUtility.ClearProgressBar();
+            }
+        }
+        internal void BakeCompleteProg()
+        {
             EditorUtility.DisplayDialog("LTCGI bake", "Lightmap baking has finished, LTCGI will now apply the generated configuration.", "OK");
 
             EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Copying calculated lightmaps", 0.0f);
 
             // move away calculated lightmap assets
-            if (!AssetDatabase.IsValidFolder("Assets/_pi_/_LTCGI/Generated"))
-                AssetDatabase.CreateFolder("Assets/_pi_/_LTCGI", "Generated");
-            AssetDatabase.DeleteAsset("Assets/_pi_/_LTCGI/Generated/Lightmaps");
-            AssetDatabase.CreateFolder("Assets/_pi_/_LTCGI/Generated", "Lightmaps");
-            foreach (var lm in LightmapSettings.lightmaps)
+            var curscene = EditorSceneManager.GetActiveScene().name;
+            AssetDatabase.DeleteAsset("Assets/_pi_/_LTCGI/Generated/Lightmaps-" + curscene);
+            AssetDatabase.CreateFolder("Assets/_pi_/_LTCGI/Generated", "Lightmaps-" + curscene);
+            for (int i = 0; i < LightmapSettings.lightmaps.Length; i++)
             {
+                LightmapData lm = LightmapSettings.lightmaps[i];
+                EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Copying calculated lightmaps", i/((float)LightmapSettings.lightmaps.Length-1.0f));
                 var tex = lm.lightmapColor;
                 var path = AssetDatabase.GetAssetPath(tex);
-                AssetDatabase.CopyAsset(path, "Assets/_pi_/_LTCGI/Generated/Lightmaps/" + System.IO.Path.GetFileName(path));
+                AssetDatabase.CopyAsset(path, "Assets/_pi_/_LTCGI/Generated/Lightmaps-" + curscene + "/" + System.IO.Path.GetFileName(path));
             }
             AssetDatabase.Refresh();
 
-            EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Applying indexed lightmaps", 0.5f);
-            /*var allRenderers = Component.FindObjectsOfType<MeshRenderer>();
-            foreach (var r in allRenderers)
-            {
-                if (r.lightmapIndex < 0 || r.lightmapIndex == 0xFFFE) continue;
-                foreach (var mat in r.sharedMaterials)
-                {
-                    //if (LTCGI_Controller.MatLTCGIenabled(mat))
-                    {
-                        var idx = r.lightmapIndex;
-                        var tex = LightmapSettings.lightmaps[idx].lightmapColor;
-                        var path = AssetDatabase.GetAssetPath(tex);
-                        var tex2 = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_pi_/_LTCGI/Generated/Lightmaps/" + System.IO.Path.GetFileName(path));
-                        SetTextureImporterToLightmap(tex2);
-                        break;
-                    }
-                }
-            }*/
+            EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Caching lightmaps", 0.0f);
 
             // Copy data to LTCGI buffer, so that other bakes don't influence it
             _LTCGI_Lightmaps = new Texture2D[LightmapSettings.lightmaps.Length];
             for (int i = 0; i < LightmapSettings.lightmaps.Length; i++)
             {
+                EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Caching lightmaps", i/((float)LightmapSettings.lightmaps.Length-1.0f));
                 var tex = LightmapSettings.lightmaps[i].lightmapColor;
                 var path = AssetDatabase.GetAssetPath(tex);
-                var tex2 = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_pi_/_LTCGI/Generated/Lightmaps/" + System.IO.Path.GetFileName(path));
+                var tex2 = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/_pi_/_LTCGI/Generated/Lightmaps-" + curscene + "/" + System.IO.Path.GetFileName(path));
                 SetTextureImporterToLightmap(tex2);
                 _LTCGI_Lightmaps[i] = tex2;
             }
 
-            var renderers = GameObject.FindObjectsOfType<MeshRenderer>();
-            var rkey = new List<MeshRenderer>();
+            EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Applying indexed lightmaps to renderers", 0.0f);
+
+            var renderers = GameObject.FindObjectsOfType<Renderer>();
+            var rkey = new List<Renderer>();
             var rval = new List<Vector4>();
             var rival = new List<int>();
-            foreach (var r in renderers)
+            for (int i = 0; i < renderers.Length; i++)
             {
+                EditorUtility.DisplayProgressBar("Finishing LTCGI bake", "Applying indexed lightmaps to renderers", i/((float)renderers.Length-1.0f));
+                var r = renderers[i];
                 if (GameObjectUtility.AreStaticEditorFlagsSet(r.gameObject, StaticEditorFlags.ContributeGI))
                 {
                     rkey.Add(r);

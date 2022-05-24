@@ -11,8 +11,8 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
     public bool DEBUG_ReverseUnityLightmapST = false;
 
     [Header("Internal Data (auto-generated, do not edit!)")]
-    public MeshRenderer[] _Renderers;
-    public MeshRenderer[] _DynamicRenderers;
+    public Renderer[] _Renderers;
+    public Renderer[] _DynamicRenderers;
     public Texture2D[] _LTCGI_Lightmaps;
     public Vector4[] _LTCGI_LightmapST;
     public float[][] _LTCGI_Mask;
@@ -27,6 +27,7 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
     public Vector4[] _LTCGI_Vertices_0, _LTCGI_Vertices_1, _LTCGI_Vertices_2, _LTCGI_Vertices_3;
     public Vector4[] _LTCGI_Vertices_0t, _LTCGI_Vertices_1t, _LTCGI_Vertices_2t, _LTCGI_Vertices_3t;
     public Vector4[] _LTCGI_ExtraData;
+    public Texture2D _LTCGI_static_uniforms;
     public Transform[] _LTCGI_ScreenTransforms;
     public int _LTCGI_ScreenCount;
     public int[] _LTCGI_ScreenCountMasked;
@@ -39,6 +40,9 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
     void Start()
     {
         Debug.Log("LTCGI adapter start");
+
+        var stopwatch = new System.Diagnostics.Stopwatch();
+        stopwatch.Start();
 
         if (DEBUG_ReverseUnityLightmapST)
         {
@@ -85,6 +89,9 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
             block.SetInt("_LTCGI_ScreenCount", _LTCGI_ScreenCountMasked[i]);
             block.SetTexture("_LTCGI_Lightmap", _LTCGI_Lightmaps[i]);
             block.SetVector("_LTCGI_LightmapMult", _LTCGI_LightmapMult);
+
+            if (_LTCGI_static_uniforms != null)
+                block.SetTexture("_LTCGI_static_uniforms", _LTCGI_static_uniforms);
 
             var lmst = _LTCGI_LightmapST[i];
             if (DEBUG_ReverseUnityLightmapST)
@@ -151,7 +158,9 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
 
         Update();
 
-        Debug.Log($"LTCGI adapter started for {_LTCGI_ScreenCount} ({_LTCGI_ScreenCountDynamic} dynamic) screens, {_Renderers.Length} renderers, {mi} materials");
+        stopwatch.Stop();
+
+        Debug.Log($"LTCGI adapter started for {_LTCGI_ScreenCount} ({_LTCGI_ScreenCountDynamic} dynamic) screens, {_Renderers.Length} renderers, {mi} materials, took: {stopwatch.ElapsedMilliseconds}ms");
 
         if (_LTCGI_ScreenCountDynamic == 0 || _Renderers.Length == 0)
         {
@@ -190,7 +199,7 @@ public class LTCGI_UdonAdapter : UdonSharpBehaviour
         var block = new MaterialPropertyBlock();
         for (int i = 0; i < _DynamicRenderers.Length; i++)
         {
-            MeshRenderer r = _DynamicRenderers[i];
+            var r = _DynamicRenderers[i];
             r.GetPropertyBlock(block); // we know it has one at this point
             block.SetVectorArray("_LTCGI_ExtraData", _LTCGI_ExtraData);
             block.SetVectorArray("_LTCGI_Vertices_0", _LTCGI_Vertices_0t);

@@ -17,6 +17,8 @@ namespace pi.LTCGI
     [CustomEditor(typeof(LTCGI_Controller))]
     public class LTCGI_ControllerEditor : Editor
     {
+        const string VERSION = "v0.9.3.99";
+
         private static readonly string[] CONFIGURATION_PROPS = new[] {
             "VideoTexture",
             "StaticTextures",
@@ -43,6 +45,11 @@ namespace pi.LTCGI
         public void OnEnable()
         {
             Logo = Resources.Load("LTCGI-LogoController") as Texture;
+
+            if (configChangedValues != null)
+            {
+                configChangedValues.Clear();
+            }
         }
 
         public override void OnInspectorGUI()
@@ -51,6 +58,10 @@ namespace pi.LTCGI
             style.alignment = TextAnchor.MiddleCenter;
             style.fixedHeight = 150;
             GUI.Box(GUILayoutUtility.GetRect(300, 150, style), Logo, style);
+
+            var rightAlignedLabel = new GUIStyle(EditorStyles.label);
+            rightAlignedLabel.alignment = TextAnchor.MiddleRight;
+            GUILayout.Label(VERSION, rightAlignedLabel);
 
             if (PrefabUtility.IsPartOfPrefabAsset(target))
             {
@@ -81,7 +92,36 @@ namespace pi.LTCGI
                 LTCGI_Controller.Singleton.BakeComplete();
             }
 
-            EditorGUILayout.Space(); EditorGUILayout.Space(); EditorGUILayout.Space();
+            EditorGUILayout.Space(); EditorGUILayout.Space();
+
+            LTCGI_Controller.DrawAutoSetupEditor(LTCGI_Controller.Singleton);
+
+            EditorGUILayout.Space(); EditorGUILayout.Space();
+
+            if (LTCGI_Controller.Singleton.cachedMeshRenderers != null && LTCGI_Controller.Singleton._LTCGI_ScreenTransforms != null)
+            {
+                    EditorGUILayout.HelpBox(
+$@"Affected Renderers Total: {LTCGI_Controller.Singleton.cachedMeshRenderers.Length}
+LTCGI_Screen Components: {LTCGI_Controller.Singleton._LTCGI_ScreenTransforms.Count(x => x != null)} / {LTCGI_Controller.MAX_SOURCES}
+AudioLink: {(LTCGI_Controller.AudioLinkAvailable ? "Available" : "Not Detected")}",
+                    MessageType.Info, true
+                );
+
+                if (!LTCGI_Controller.AudioLinkAvailable)
+                {
+                    if (GUILayout.Button("Re-Detect AudioLink"))
+                    {
+                        LTCGI_Controller.audioLinkAvailable = null;
+                        var _ignored = LTCGI_Controller.AudioLinkAvailable;
+                    }
+                }
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("Hit \"Force Update\" or CTRL-S to calculate info!", MessageType.Info);
+            }
+
+            EditorGUILayout.Space(); EditorGUILayout.Space();
             var header = new GUIStyle(EditorStyles.boldLabel);
             header.fontSize += 4;
             GUILayout.Label("LTCGI Configuration", header);
@@ -104,10 +144,14 @@ namespace pi.LTCGI
             {
                 // FIXME: make more robust
                 var guids = AssetDatabase.FindAssets("LTCGI_config");
-                if (guids.Length != 1)
+                if (guids.Length < 1)
                 {
                     Debug.LogError($"Could not find LTCGI_config.cginc ({guids.Length})! Please reimport package.");
                     return;
+                }
+                else if (guids.Length > 1)
+                {
+                    Debug.LogWarning("LTCGI_config.cginc found more than once - this is not recommended!");
                 }
                 configPath = AssetDatabase.GUIDToAssetPath(guids[0]);
             }
@@ -120,6 +164,23 @@ namespace pi.LTCGI
                 string lineRaw = config[i];
                 var line = lineRaw.Trim();
                 if (string.IsNullOrEmpty(line)) continue;
+
+                if (line.EndsWith("#define LTCGI_AUDIOLINK"))
+                {
+                    var enabledInConfig = !line.StartsWith("//");
+                    var available = LTCGI_Controller.AudioLinkAvailable;
+                    if (enabledInConfig != available)
+                    {
+                        config[i] = (available ? "" : "//") + "#define LTCGI_AUDIOLINK";
+                        if (configChangedValues.Count == 0)
+                        {
+                            // force apply in case no apply button visible
+                            File.WriteAllLines(configPath, config);
+                            AssetDatabase.Refresh();
+                        }
+                    }
+                    continue;
+                }
 
                 if (line.StartsWith("///"))
                 {

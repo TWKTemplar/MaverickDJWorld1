@@ -6,13 +6,20 @@
 #include "LTCGI_functions.cginc"
 #include "LTCGI_shadowmap.cginc"
 
+#ifdef LTCGI_AUDIOLINK
+#ifndef AUDIOLINK_WIDTH
+#include "Assets/AudioLink/Shaders/AudioLink.cginc"
+#define AUDIOLINK_CGINC_INCLUDED
+#endif
+#endif
+
 #ifdef SHADER_TARGET_SURFACE_ANALYSIS
 #define const  
 #endif
 
 // Main function - this calculates the approximated model for one pixel and one light
 /* private */ float LTCGI_Evaluate(
-    float3 Lw[4], float3 worldNorm, float3 viewDir, float3x3 Minv, uint i, float roughness,
+    float3 Lw[4], float3 worldNorm, float3 viewDir, float3x3 Minv, uint i, float roughness, bool isTri,
     float2 uvStart, float2 uvEnd, const bool diffuse, ltcgi_flags flags, inout float3 color
 ) {
     // diffuse distance fade
@@ -22,17 +29,43 @@
         #endif
         if (diffuse) // static branch, specular does not directly fade with distance
         {
-            // very approximate lol
-            float3 ctr = (Lw[0] + Lw[1])/2;
-            float dist = length(ctr);
-            if (dist > LTCGI_DISTANCE_FADE_APPROX_MULT)
-            {
-                #ifdef LTCGI_DISTANCE_FADE_APPROX_ERROR_VISUALIZE
-                    distFadeError = true;
-                #else
-                    return 0;
-                #endif
+            if (!flags.lmdOnly) {
+                // very approximate lol
+                float3 ctr = (Lw[0] + Lw[1])/2;
+                float dist = length(ctr);
+                if (dist > LTCGI_DISTANCE_FADE_APPROX_MULT)
+                {
+                    #ifdef LTCGI_DISTANCE_FADE_APPROX_ERROR_VISUALIZE
+                        distFadeError = true;
+                    #else
+                        return 0;
+                    #endif
+                }
             }
+        }
+    #endif
+
+    #define RET1_IF_LMDIFF [branch] if (/*const*/ diffuse && flags.diffFromLm) return 1;
+
+    if (flags.colormode == LTCGI_COLORMODE_SINGLEUV) {
+        float2 uv = uvStart;
+        if (uv.x < 0) uv.xy = uv.yx;
+        // TODO: make more configurable?
+        #ifdef LTCGI_VISUALIZE_SAMPLE_UV
+            color = float3(uv.xy, 0);
+        #else
+            color *= LTCGI_sample(LTCGI_inset_uv(uv), 1, flags.texindex, 0);
+        #endif
+
+        RET1_IF_LMDIFF
+    }
+
+    #ifdef LTCGI_AUDIOLINK
+        if (flags.colormode == LTCGI_COLORMODE_AUDIOLINK) {
+            float al = AudioLinkData(ALPASS_AUDIOLINK + uint2(0, flags.alBand)).r;
+            color *= al;
+
+            RET1_IF_LMDIFF
         }
     #endif
 
@@ -41,58 +74,17 @@
     float3 L[5];
     L[0] = mul(Minv, Lw[0]);
     L[1] = mul(Minv, Lw[1]);
-    L[2] = mul(Minv, Lw[3]);
+    L[2] = isTri ? L[1] : mul(Minv, Lw[3]);
     L[3] = mul(Minv, Lw[2]);
     L[4] = 0;
 
     // get texture coords (before clipping!)
     [branch]
     if (flags.colormode == LTCGI_COLORMODE_TEXTURE) {
-        // orthonormal projection to transformed rectangle
-        float3 V1 = L[1] - L[0];
-        float3 V2 = L[3] - L[0];
-        float3 RN = cross(V1, V2);
+        float3 RN;
+        float2 uv = LTCGI_calculateUV(i, flags, L, isTri, uvStart, uvEnd, RN);
         float planeAreaSquared = dot(RN, RN);
         float planeDistxPlaneArea = dot(RN, L[0]);
-
-        float2 uv;
-        #ifdef LTCGI_EXPERIMENTAL_UV_MAP
-            float3 vsum = 0;
-            // LTCGI_EXPERIMENTAL_UV_MAP is experimental, and NOT OPTIMIZED!
-            float3 Ln2[4];
-            Ln2[0] = normalize(L[0]);
-            Ln2[1] = normalize(L[1]);
-            Ln2[2] = normalize(L[2]);
-            Ln2[3] = normalize(L[3]);
-            vsum += LTCGI_IntegrateEdge(Ln2[0], Ln2[1]);
-            vsum += LTCGI_IntegrateEdge(Ln2[1], Ln2[2]);
-            vsum += LTCGI_IntegrateEdge(Ln2[2], Ln2[3]);
-            vsum += LTCGI_IntegrateEdge(Ln2[3], Ln2[0]);
-
-            float2 bary;
-            bool hit0 = LTCGI_tri_ray(0, vsum, L[0], L[1], L[2], bary);
-            if (!hit0) {
-                LTCGI_tri_ray(0, vsum, L[0], L[2], L[3], bary);
-            }
-
-            float3 bary3 = float3(bary, 1 - bary.x - bary.y);
-            uv = uvs[2 - hit0] * bary3.x + uvs[3 - hit0] * bary3.y + uvs[0] * bary3.z;
-        #else
-            // orthonormal projection of (0,0,0) in area light space
-            float3 P = planeDistxPlaneArea * RN / planeAreaSquared - L[0];
-
-            // find tex coords of P
-            float dot_V1_V2 = dot(V1, V2);
-            float inv_dot_V1_V1 = 1 / dot(V1, V1);
-            float3 V3 = V2 - V1 * dot_V1_V2 * inv_dot_V1_V1;
-            uv.y = dot(V3, P) / dot(V3, V3);
-            uv.x = dot(V1, P) * inv_dot_V1_V1 - dot_V1_V2 * inv_dot_V1_V1 * uv.y;
-
-            // remap onto object UVs
-            if (uvStart.x < 0 || uvEnd.x < 0) uv.xy = uv.yx; // workaround
-            uv.x = LTCGI_remap(0, 1, abs(uvStart.x), abs(uvEnd.x), uv.x);
-            uv.y = LTCGI_remap(0, 1, uvStart.y, uvEnd.y, uv.y);
-        #endif
 
         float3 sampled;
         #ifdef LTCGI_VISUALIZE_SAMPLE_UV
@@ -105,16 +97,8 @@
                     LTCGI_sample(uv, 3, flags.texindex, 100) * 0.25;
             } else {
                 float d = abs(planeDistxPlaneArea) / planeAreaSquared;
-                #ifdef LTCGI_EXPERIMENTAL_UV_MAP
-                    d *= 800.0f;
-                #else
-                    d *= LTCGI_UV_BLUR_DISTANCE;
-                #endif
+                d *= LTCGI_UV_BLUR_DISTANCE;
                 d = log(d) / log(3.0);
-
-                // fake brightness makes objects appear sharper
-                if (!diffuse && length(color) > 2.1)
-                    d = d / clamp(length(color)*0.08, 1, 2);
 
                 // a rough material must never show a perfect reflection,
                 // since our LOD0 texture is not prefiltered (and thus cannot
@@ -128,21 +112,10 @@
 
         // colorize output
         color *= sampled;
-    } else if (flags.colormode == LTCGI_COLORMODE_SINGLEUV) {
-        float2 uv = uvStart;
-        if (uv.x < 0) uv.xy = uv.yx;
-        // TODO: make more configurable?
-        #ifdef LTCGI_VISUALIZE_SAMPLE_UV
-            color = float3(uv.xy, 0);
-        #else
-            color *= LTCGI_sample(LTCGI_inset_uv(uv), 1, flags.texindex, 0);
-        #endif
     }
 
-    [branch]
-    if (diffuse && flags.diffFromLm) {
-        return 1;
-    }
+    RET1_IF_LMDIFF
+    #undef RET1_IF_LMDIFF
 
     int n;
     LTCGI_ClipQuadToHorizon(L, n);
@@ -157,11 +130,13 @@
     L[3] = normalize(L[3]);
     L[4] = normalize(L[4]);
 
-    // integrate
+    // integrate (and pray that constant folding works well)
     float sum = 0;
     [unroll(5)]
     for (uint v = 0; v < max(3, (uint)n); v++) {
-        sum += LTCGI_IntegrateEdge(L[v], L[(v + 1) % 5]).z;
+        float3 a = L[v];
+        float3 b = L[(v + 1) % 5];
+        sum += LTCGI_IntegrateEdge(a, b).z;
     }
 
     #ifdef LTCGI_DISTANCE_FADE_APPROX
@@ -245,6 +220,15 @@
         totalSpecularIntensity = 0;
     #endif
 
+    bool noLm = false;
+    #ifdef LTCGI_LTC_DIFFUSE_FALLBACK
+    #ifndef SHADER_TARGET_SURFACE_ANALYSIS
+        float2 lmSize;
+        _LTCGI_Lightmap.GetDimensions(lmSize.x, lmSize.y);
+        noLm = lmSize.x == 1;
+    #endif
+    #endif
+
     // loop through all lights and add them to the output
     uint count = min(_LTCGI_ScreenCount, MAX_SOURCES);
     [loop]
@@ -255,7 +239,7 @@
         float3 color = extra.rgb;
         if (!any(color)) continue;
 
-        ltcgi_flags flags = ltcgi_parse_flags(asuint(extra.w));
+        ltcgi_flags flags = ltcgi_parse_flags(asuint(extra.w), noLm);
 
         #ifdef LTCGI_TOGGLEABLE_SPEC_DIFF_OFF
             // compile branches below away statically
@@ -264,13 +248,20 @@
 
         // calculate (shifted) world space positions
         float3 Lw[4];
-        float2 uvStart, uvEnd;
-        LTCGI_GetLw(i, flags, worldPos, viewDir, Lw, uvStart, uvEnd);
+        float2 uvStart = (float2)0, uvEnd = (float2)0;
+        bool isTri = false;
+        if (flags.lmdOnly) {
+            Lw[0] = Lw[1] = Lw[2] = Lw[3] = (float3)0;
+        } else {
+            LTCGI_GetLw(i, flags, worldPos, Lw, uvStart, uvEnd, isTri);
+        }
 
         // skip single-sided lights that face the other way
-        float3 screenNorm = cross(Lw[1] - Lw[0], Lw[3] - Lw[0]);
-        if (!flags.doublesided && dot(screenNorm, Lw[0]) < 0)
-            continue;
+        if (!flags.doublesided) {
+            float3 screenNorm = cross(Lw[1] - Lw[0], Lw[2] - Lw[0]);
+            if (dot(screenNorm, Lw[0]) < 0)
+                continue;
+        }
 
         float lm = 1;
         if (flags.lmch) {
@@ -289,27 +280,29 @@
             {
                 float lmd = lm;
                 if (flags.lmch) {
-                    if (!flags.diffFromLm)
-                        lmd = saturate(lm - LTCGI_LIGHTMAP_CUTOFF);
-                    lmd *= _LTCGI_LightmapMult[flags.lmch - 1];
-                    //lmd = pow(lmd*0.25, 0.8)*4;
+                    if (flags.diffFromLm)
+                        lmd *= _LTCGI_LightmapMult[flags.lmch - 1];
+                    else
+                        lmd = smoothstep(0.0, LTCGI_SPECULAR_LIGHTMAP_STEP, saturate(lm - LTCGI_LIGHTMAP_CUTOFF));
                 }
-                float diff = LTCGI_Evaluate(Lw, worldNorm, viewDir, identityBrdf, i, roughness, uvStart, uvEnd, true, flags, color);
-                if (flags.lmch && !flags.diffFromLm)
-                    diff = pow(diff, LTCGI_LTC_DIFFUSE_POWER);
+                float diff = LTCGI_Evaluate(Lw, worldNorm, viewDir, identityBrdf, i, roughness, isTri, uvStart, uvEnd, true, flags, color);
                 diffuse += (diff * color * lmd);
             }
         #endif
 
         // specular lighting
         #ifndef LTCGI_SPECULAR_OFF
-            // reset color
-            color = saturate(extra.rgb);
-
             [branch]
             if (flags.specular)
             {
-                float spec = LTCGI_Evaluate(Lw, worldNorm, viewDir, Minv, i, roughness, uvStart, uvEnd, false, flags, color);
+                // reset color
+                #ifdef LTCGI_ALLOW_HDR_SPECULAR
+                    color = extra.rgb;
+                #else
+                    color = saturate(extra.rgb);
+                #endif
+
+                float spec = LTCGI_Evaluate(Lw, worldNorm, viewDir, Minv, i, roughness, isTri, uvStart, uvEnd, false, flags, color);
                 spec *= spec_amp * smoothstep(0.0, LTCGI_SPECULAR_LIGHTMAP_STEP, saturate(lm - LTCGI_LIGHTMAP_CUTOFF));
                 #ifndef LTCGI_SPECULAR_OFF
                     totalSpecularIntensity += spec;

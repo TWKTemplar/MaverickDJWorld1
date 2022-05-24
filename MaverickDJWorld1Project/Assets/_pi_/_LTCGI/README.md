@@ -10,14 +10,16 @@ Join the Discord for support or other questions: https://discord.gg/r38vJd2DuJ
 
 ![Header Image](./Screenshots/header.jpg)
 
-![Demo Video](./Screenshots/ltcgi.gif)  
-(demo video by [@orels1](https://github.com/orels1))
+![Demo Video](./Screenshots/demo.gif)  
+[Demo Video](https://www.youtube.com/watch?v=DJXgspErWlU)
 
 ## Supported shaders
 
 To use LTCGI, all objects that should receive lighting must use a compatible shader. Currently compatible ones are listed below. If you implement LTCGI into your shader, feel free to send a PR to be included.
 
 * [ORL Shader Family](https://shaders.orels.sh/) by [@orels1](https://github.com/orels1)
+* [Silent's Filamented](https://gitlab.com/s-ilent/filamented)
+* [Mochie's Unity Shaders](https://github.com/MochiesCode/Mochies-Unity-Shaders)
 * Basic "Unlit" Test Shader (included)
 * Surface Shader (included)
 
@@ -31,6 +33,12 @@ Check the [Releases](https://github.com/PiMaker/ltcgi/releases) tab for download
 ### Dependencies
 * [UdonSharp](https://github.com/MerlinVR/UdonSharp)
 * [CyanEmu](https://github.com/CyanLaser/CyanEmu) (optional, but highly recommended)
+
+### Debug builds
+
+*NOTE: These are provided as-is with no guarantees. Feel free to report any issues on the [Discord](https://discord.gg/r38vJd2DuJ), but remember that it is explicitly recommended to use the downloads from the [Releases](https://github.com/PiMaker/ltcgi/releases) tab instead!*
+
+Check the latest build from the [Actions tab](https://github.com/PiMaker/ltcgi/actions/workflows/main.yml?query=is%3Asuccess) and download the corresponding *artifact* (comes as a zip you need to extract first).
 
 ## Attribution
 

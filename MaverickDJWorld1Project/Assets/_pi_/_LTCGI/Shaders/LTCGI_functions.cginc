@@ -265,12 +265,13 @@ bool LTCGI_tri_ray(float3 orig, float3 dir, float3 v0, float3 v1, float3 v2, out
 
     float3 tvec = orig - v0;
     bary.x = dot(tvec, pvec) * invDet;
-    if (bary.x < 0 || bary.x > 1) return false;
 
     float3 qvec = cross(tvec, v0v1);
     bary.y = dot(dir, qvec) * invDet;
 
-    return true;
+    // return false when other triangle of quad should be sampled,
+    // i.e. we went over the diagonal line
+    return bary.x >= 0;
 }
 
 float2 LTCGI_rotateVector(float2 x, float angle)
@@ -280,61 +281,130 @@ float2 LTCGI_rotateVector(float2 x, float angle)
     return mul(float2x2(c,s,-s,c), x);
 }
 
+float2 LTCGI_calculateUV(uint i, ltcgi_flags flags, float3 L[5], bool isTri, float2 uvStart, float2 uvEnd, out float3 ray)
+{
+    // calculate perpendicular vector to plane defined by area light
+    float3 E1 = L[1] - L[0];
+    float3 E2 = L[3] - L[0];
+    ray = cross(E1, E2);
+
+    // raycast it against the two triangles formed by the quad
+    float2 bary;
+    bool hit0 = LTCGI_tri_ray(0, ray, L[0], L[2], L[3], bary) || isTri;
+    if (!hit0) {
+        LTCGI_tri_ray(0, ray, L[0], L[1], L[2], bary);
+    }
+
+    float2 uvs[4];
+    #ifdef LTCGI_CYLINDER
+    if (flags.cylinder) {
+        uvs[0] = uvStart;
+        uvs[1] = float2(uvStart.x, uvEnd.y);
+        uvs[2] = float2(uvEnd.x, uvStart.y);
+        uvs[3] = uvEnd;
+    } else
+    #endif
+    {
+        uvs[0] = uvStart; // == _LTCGI_static_uniforms[uint2(4, i)].xy;
+        uvs[1] = _LTCGI_static_uniforms[uint2(4, i)].zw;
+        uvs[2] = _LTCGI_static_uniforms[uint2(5, i)].xy;
+        uvs[3] = uvEnd; // == _LTCGI_static_uniforms[uint2(5, i)].zw;
+    }
+
+    // map barycentric triangle coordinates to the according object UVs
+    float3 bary3 = float3(bary, 1 - bary.x - bary.y);
+    float2 uv = uvs[1 + hit0*2] * bary3.x + uvs[3 - hit0] * bary3.y + uvs[0] * bary3.z;
+
+    return uv;
+}
+
 /*
     EXPERIMENTAL: CYLINDER HELPER
 */
 
-void LTCGI_GetLw(uint i, ltcgi_flags flags, float3 worldPos, float3 viewDir, out float3 Lw[4], out float2 uvStart, out float2 uvEnd) {
+void LTCGI_GetLw(uint i, ltcgi_flags flags, float3 worldPos, out float3 Lw[4], out float2 uvStart, out float2 uvEnd, out bool isTri) {
     bool cylinder = false;
     #ifdef LTCGI_CYLINDER
         // statically optimize out branch below in case disabled
         cylinder = flags.cylinder;
     #endif
 
+    float4 v0 = _LTCGI_Vertices_0_get(i);
+    float4 v1 = _LTCGI_Vertices_1_get(i);
+    float4 v2 = _LTCGI_Vertices_2_get(i);
+    float4 v3 = _LTCGI_Vertices_3_get(i);
+
+    [branch]
     if (cylinder) {
         // construct data according to worldPos to create aligned
         // rectangle tangent to the cylinder
-        float3 in_base = _LTCGI_Vertices_0[i].xyz;
-        float in_height = _LTCGI_Vertices_0[i].w;
-        float in_radius = _LTCGI_Vertices_1[i].w;
-        float in_size = _LTCGI_Vertices_2[i].w;
-        float in_angle = _LTCGI_Vertices_3[i].w;
+        
+        float3 in_base = v0.xyz;
+        float in_height = v0.w;
+        float in_radius = v1.w;
+        float in_size = v2.w;
+        float in_angle = v3.w;
 
-        float2 centerForward = float2(sin(in_angle), cos(in_angle));
-        float2 towardsCylinder = (in_base - worldPos).xz;
-        float angle = atan2(centerForward.y, centerForward.x) - atan2(towardsCylinder.y, towardsCylinder.x);
-        float angleClamped = clamp(angle, -UNITY_PI/2, UNITY_PI/2);
-        float2 facing = LTCGI_rotateVector(centerForward, angleClamped);
+        // get angle between 2D unit plane and vector pointing from cylinder to shade point
+        float2 towardsCylinder = LTCGI_rotateVector((in_base - worldPos).xz, -in_angle);
+        float angle = atan2(towardsCylinder.x, towardsCylinder.y);
+        // clamp angle to size parameter, i.e. "width" of lit surface area
+        float angleClamped = clamp(angle, -in_size, in_size) + in_angle;
+        // construct vector that *most* faces shade point
+        float2 facing = float2(sin(angleClamped), cos(angleClamped));
+        // tangent of rectangular screen on cylinder surface used for calculating lighting for shade point
         float2 tangent = float2(facing.y, -facing.x);
         float2 onCylinderFacing = facing * in_radius;
 
         // clip ends, approximately
-        float rclip = saturate(lerp(1, 0, angleClamped - (UNITY_PI/2) + in_size*2));
-        float lclip = saturate(lerp(1, 0, -angleClamped - (UNITY_PI/2) + in_size*2));
+        float rclip = saturate(lerp(1, 0, (angleClamped - in_angle) - (in_size - UNITY_HALF_PI*0.5f)));
+        float lclip = saturate(lerp(1, 0, -(angleClamped - in_angle) - (in_size - UNITY_HALF_PI*0.5f)));
 
-        float2 p1 = in_base.xz - onCylinderFacing + tangent * in_size * lclip;
-        float2 p2 = in_base.xz - onCylinderFacing - tangent * in_size * rclip;
+        float2 p1 = in_base.xz - onCylinderFacing + tangent * in_radius * lclip;
+        float2 p2 = in_base.xz - onCylinderFacing - tangent * in_radius * rclip;
 
         Lw[0] = float3(p1.x, in_base.y,             p1.y) - worldPos;
         Lw[1] = float3(p1.x, in_base.y + in_height, p1.y) - worldPos;
         Lw[2] = float3(p2.x, in_base.y,             p2.y) - worldPos;
         Lw[3] = float3(p2.x, in_base.y + in_height, p2.y) - worldPos;
 
-        // UV depends on viewing angle (for specular)
-        float2 centerTangent = float2(centerForward.y, -centerForward.x);
-        viewDir = normalize(in_base - worldPos);
-        float viewAngle = atan2(centerForward.y, centerForward.x) - atan2(viewDir.z, viewDir.x);
-        uvStart = float2(-(1 - sin(saturate(viewAngle*0.5))), 0);
-        uvEnd = float2(-sin(saturate(-viewAngle*0.5)), 1);
+        isTri = false;
+
+        // UV depends on "viewing" angle of the shade point towards the cylinder
+        float2 viewDir = normalize((in_base - worldPos).xz);
+        // forwardAngle == atan2(cos(in_angle), sin(in_angle)); but only negative
+        float forwardAngle = -in_angle + UNITY_HALF_PI;
+        // offset from center of screen forward to the side ends, positive goes left/ccw fpv top,
+        // sine to account for the fact we're rotating around a cylinder which has depth
+        float viewAngle = forwardAngle - atan2(viewDir.y, viewDir.x);
+        // prevent rollover, since we need to clamp we must stay withing [-pi, pi]
+        if (viewAngle < -UNITY_PI)
+            viewAngle += UNITY_TWO_PI;
+        if (viewAngle > UNITY_PI)
+            viewAngle -= UNITY_TWO_PI;
+        viewAngle = clamp(viewAngle * 0.5f, -in_size, in_size);
+        viewAngle = sin(viewAngle);
+        // full view UVs, but shifted left/right depending on view angle
+        uvStart = float2(1 - saturate(viewAngle), 0);
+        uvEnd = float2(1 - saturate(viewAngle + 1), 1);
 
     } else {
         // use passed in data, offset around worldPos
-        Lw[0] = _LTCGI_Vertices_0[i].xyz - worldPos;
-        Lw[1] = _LTCGI_Vertices_1[i].xyz - worldPos;
-        Lw[2] = _LTCGI_Vertices_2[i].xyz - worldPos;
-        Lw[3] = _LTCGI_Vertices_3[i].xyz - worldPos;
-        uvStart = float2(_LTCGI_Vertices_0[i].w, _LTCGI_Vertices_1[i].w);
-        uvEnd = float2(_LTCGI_Vertices_2[i].w, _LTCGI_Vertices_3[i].w);
+        Lw[0] = v0.xyz - worldPos;
+        Lw[1] = v1.xyz - worldPos;
+        Lw[2] = v2.xyz - worldPos;
+        Lw[3] = v3.xyz - worldPos;
+        #ifndef SHADER_TARGET_SURFACE_ANALYSIS
+            uvStart = _LTCGI_static_uniforms[uint2(4, i)].xy;
+            uvEnd = _LTCGI_static_uniforms[uint2(5, i)].zw;
+        #else
+            uvStart = float2(0, 0);
+            uvEnd = float2(1, 1);
+        #endif
+
+        // we only detect triangles for "blender" import configuration, as those are the only
+        // ones that can actually be triangles (I think?)
+        isTri = /*distance(Lw[2], Lw[3]) < 0.001 || */distance(Lw[1], Lw[3]) < 0.001;
     }
 }
 
