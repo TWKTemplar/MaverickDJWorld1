@@ -1,0 +1,126 @@
+#T#AngryLabsAudioBumpProperties
+// AngryLabs AudioBump
+[HideInInspector] m_start_AngryLabsAudioBump ("AudioBump--{reference_property:_AngryLabsAudioBumpEnabled}", Float) = 0
+[HideInInspector] [ThryToggle(_AngryLabsAudioBumpEnableKeyword)]_AngryLabsAudioBumpEnabled ("Audio bump enabled", Float) = 1
+[ThryHeaderLabel(Blend Shape control, 12)]
+
+[ToggleUI] _AngryLabsAudioBumpUseBlendshapes("Use Blendshape texture", Float) = 0
+
+[ThryExternalTextureToolDrawer(Blend shape baker, AngryLabs.AudioBump.PoiDrawer)] _AngryLabsAudioBumpBlendshapes ("Blend shape texture", 2D) = "black" { }
+
+_AngryLabsAudioBumpScale ("Blendshape Scale Correction", Float) = 1.0
+
+[ThryHeaderLabel(Audiolink Bands for blend shapes, 13)]
+[ThryHeaderLabel(x is Low, 13)]
+[ThryHeaderLabel(y is MidLow, 13)]
+[ThryHeaderLabel(z is MidHigh, 13)]
+[ThryHeaderLabel(w is High, 13)]
+_AngryLabsAudioBumpBlend1 ("Blendshape 1", Vector) = (1.0, 0.0, 0.0, 0.0)
+_AngryLabsAudioBumpBlend2 ("Blendshape 2", Vector) = (0.0, 1.0, 0.0, 0.0)
+_AngryLabsAudioBumpBlend3 ("Blendshape 3", Vector) = (0.0, 0.0, 1.0, 0.0)
+_AngryLabsAudioBumpBlend4 ("Blendshape 4", Vector) = (0.0, 0.0, 0.0, 1.0)
+[HideInInspector] m_end_AngryLabsAudioBump ("AudioBump - end", Float) = 0
+
+#T#AngryLabsAudioBumpKeywords
+// AngryLabs AudioBump
+#pragma shader_feature _AngryLabsAudioBumpEnableKeyword
+//#define _AngryLabsAudioBumpEnableKeyword
+
+#T#AngryLabsAudioBumpVariables
+// AngryLabs AudioBump
+#ifdef _AngryLabsAudioBumpEnableKeyword
+	float _AngryLabsAudioBumpUseBlendshapes;
+	sampler2D_float _AngryLabsAudioBumpBlendshapes;
+	float4 _AngryLabsAudioBumpBlendshapes_TexelSize;
+	
+	float _AngryLabsAudioBumpScale;
+	float4 _AngryLabsAudioBumpBlend1;
+	float4 _AngryLabsAudioBumpBlend2;
+	float4 _AngryLabsAudioBumpBlend3;
+	float4 _AngryLabsAudioBumpBlend4;
+#endif
+
+
+#T#AngryLabsAudioBumpFunctions
+// AngryLabs AudioBump
+#ifdef _AngryLabsAudioBumpEnableKeyword
+
+float AngryLabsAudioBumpVertexBandSelect(int band, float4 audio){
+	switch(band){
+		case 0: return audio.x; 
+		case 1: return audio.y; 
+		case 2: return audio.z; 
+		case 3: return audio.w; 
+		default: return 0.0f;
+	}
+}
+
+float3 AngryLabsAudioBumpApplyVertexOffset(float4 audio, float4 maskValue, float generalScale, float3 normal, 
+		float4 directionR, float4 directionG, float4 directionB, float4 directionA,
+		int bandR, int bandG, int bandB, int bandA
+		) {
+	float4 rd = AngryLabsAudioBumpVertexBandSelect(bandR, audio) * directionR * maskValue.r;
+	float4 gd = AngryLabsAudioBumpVertexBandSelect(bandG, audio) * directionB * maskValue.g;
+	float4 bd = AngryLabsAudioBumpVertexBandSelect(bandB, audio) * directionG * maskValue.b;
+	float4 ad = AngryLabsAudioBumpVertexBandSelect(bandA, audio) * directionA * maskValue.a;
+	
+	float4 total = rd + gd + bd + ad;
+	
+	float3 ret = total.xyz + total.w * normal;
+	return ret * generalScale * audio;
+}
+
+#include "Assets/AngryLabs/AudioBump/AudioBump.cginc"
+
+#endif
+
+
+#T#AngryLabsAudioBumpImplimentation
+// AngryLabs AudioBump
+#ifdef _AngryLabsAudioBumpEnableKeyword
+	[unroll]
+	do {
+
+		//just inline the check instead of pulling in the whole audio link 
+		int hasAudioLink;
+		#if !defined(AUDIOLINK_STANDARD_INDEXING)
+		int width, height;
+		_AudioTexture.GetDimensions(width, height);
+		hasAudioLink =  width > 16;
+		#else
+		hasAudioLink = _AudioTexture_TexelSize.z > 16;
+		#endif
+		
+		if(!hasAudioLink) break; 
+
+		float4 audio = float4(
+								AudioLinkData(ALPASS_AUDIOBASS).r,
+								AudioLinkData(ALPASS_AUDIOLOWMIDS).r,
+								AudioLinkData(ALPASS_AUDIOHIGHMIDS).r,
+								AudioLinkData(ALPASS_AUDIOTREBLE).r
+								);
+					
+		float3 angryLabsAudioBumpOffset = float3(0, 0, 0);
+		
+		float4 zero = float4(0,0,0,0);
+		
+		float3 oNormal = o.objNormal;
+		
+		if(_AngryLabsAudioBumpUseBlendshapes) {
+			angryLabsAudioBumpOffset += AngryLabsAudioBumpApplyBlendshape(
+				audio,
+				v.vertexId,
+				_AngryLabsAudioBumpBlendshapes_TexelSize.z,
+				_AngryLabsAudioBumpBlendshapes,
+				_AngryLabsAudioBumpBlend1, _AngryLabsAudioBumpBlend2, _AngryLabsAudioBumpBlend3, _AngryLabsAudioBumpBlend4,
+				v.normal,
+                v.tangent,
+				_AngryLabsAudioBumpScale
+				);
+		}
+		
+		localOffset += angryLabsAudioBumpOffset;
+		worldOffset += angryLabsAudioBumpOffset;
+	} while(false);
+	
+#endif

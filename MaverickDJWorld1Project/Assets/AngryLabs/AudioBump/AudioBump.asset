@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 78b2425a2284af743826c689403a4924, type: 3}
+  m_Name: AudioBump
+  m_EditorClassIdentifier: 
+  m_functionInfo: "// Made with Amplify Shader Editor\n// Available at the Unity
+    Asset Store - http://u3d.as/y3X \n/*ASEBEGIN\nVersion=18934\n323;103;956;614;2930.74;689.9841;2.963255;True;False\nNode;AmplifyShaderEditor.TangentVertexDataNode;5;-1392.663,662.6559;Inherit;False;0;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4\nNode;AmplifyShaderEditor.DynamicAppendNode;7;-1099.582,668.8827;Inherit;False;FLOAT4;4;0;FLOAT;0;False;1;FLOAT;0;False;2;FLOAT;0;False;3;FLOAT;0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.TangentSignVertexDataNode;6;-1424.265,809.0173;Inherit;False;0;1;FLOAT;0\nNode;AmplifyShaderEditor.FunctionInput;8;-1091.743,875.8912;Inherit;False;scale;1;0;False;1;0;FLOAT;0;False;1;FLOAT;0\nNode;AmplifyShaderEditor.FunctionInput;13;-1364.237,119.7059;Inherit;False;shape1;4;3;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.FunctionInput;14;-1366.091,197.4869;Inherit;False;shape2;4;4;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.FunctionInput;15;-1380.906,293.7872;Inherit;False;shape3;4;5;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.FunctionInput;10;-1258.677,-232.1606;Inherit;False;AudioBands;4;1;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.FunctionInput;9;-1382.704,367.5754;Inherit;False;shape4;4;6;False;1;0;FLOAT4;0,0,0,0;False;1;FLOAT4;0\nNode;AmplifyShaderEditor.NormalVertexDataNode;4;-1390.642,522.3405;Inherit;False;0;5;FLOAT3;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4\nNode;AmplifyShaderEditor.FunctionInput;12;-1945.579,11.14097;Inherit;False;BlendShapes;9;2;False;1;0;SAMPLER2D;0;False;1;SAMPLER2D;0\nNode;AmplifyShaderEditor.TexelSizeNode;19;-1676.182,-111.1403;Inherit;False;-1;1;0;SAMPLER2D;;False;5;FLOAT4;0;FLOAT;1;FLOAT;2;FLOAT;3;FLOAT;4\nNode;AmplifyShaderEditor.VertexIdVariableNode;2;-1048.822,-57.6543;Inherit;False;0;1;INT;0\nNode;AmplifyShaderEditor.CustomExpressionNode;1;-725.188,-55.49598;Inherit;False;$return 
+    AngryLabsAudioBumpApplyBlendshape($\taudioValue,$\tvertexID,$\ttextureSize,$\tblendShapes,$\tblend1,
+    $\tblend2,$\tblend3,$\tblend4,$\tnormal,$                tangent,$\tscale$)@$;3;Create;11;True;audioValue;FLOAT4;0,0,0,0;In;;Inherit;False;True;vertexID;INT;0;In;;Inherit;False;True;textureSize;INT;0;In;;Inherit;False;True;blendShapes;SAMPLER2D;;In;;Inherit;False;True;blend1;FLOAT4;0,0,0,0;In;;Inherit;False;True;blend2;FLOAT4;0,0,0,0;In;;Inherit;False;True;blend3;FLOAT4;0,0,0,0;In;;Inherit;False;True;blend4;FLOAT4;0,0,0,0;In;;Inherit;False;True;normal;FLOAT3;0,0,0;InOut;;Inherit;False;True;tangent;FLOAT4;0,0,0,0;In;;Inherit;False;True;scale;FLOAT;0;In;;Inherit;False;My
+    Custom Expression;True;False;0;;False;11;0;FLOAT4;0,0,0,0;False;1;INT;0;False;2;INT;0;False;3;SAMPLER2D;;False;4;FLOAT4;0,0,0,0;False;5;FLOAT4;0,0,0,0;False;6;FLOAT4;0,0,0,0;False;7;FLOAT4;0,0,0,0;False;8;FLOAT3;0,0,0;False;9;FLOAT4;0,0,0,0;False;10;FLOAT;0;False;2;FLOAT3;0;FLOAT3;9\nNode;AmplifyShaderEditor.FunctionOutput;0;-354.0845,-79.37885;Inherit;False;True;-1;displacement;0;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0\nNode;AmplifyShaderEditor.FunctionOutput;18;-351.6003,-17.08274;Inherit;False;False;-1;normal;1;False;1;0;FLOAT3;0,0,0;False;1;FLOAT3;0\nWireConnection;7;0;5;1\nWireConnection;7;1;5;2\nWireConnection;7;2;5;3\nWireConnection;7;3;6;0\nWireConnection;19;0;12;0\nWireConnection;1;0;10;0\nWireConnection;1;1;2;0\nWireConnection;1;2;19;3\nWireConnection;1;3;12;0\nWireConnection;1;4;13;0\nWireConnection;1;5;14;0\nWireConnection;1;6;15;0\nWireConnection;1;7;9;0\nWireConnection;1;8;4;0\nWireConnection;1;9;7;0\nWireConnection;1;10;8;0\nWireConnection;0;0;1;0\nWireConnection;18;0;1;9\nASEEND*/\n//CHKSM=07B30B8E1397A86D72D2A20EB11546BC9FAF9700"
+  m_functionName: 
+  m_description: "AngryLabsAudioBumpApplyBlendshape(\r\n\taudio,\r\n\tv.vertexId,\r\n\ttextureSize,\r\n\tblendShapes,\r\n\tshape1,
+    \t\n\tshape2,\n\tshape3, \n\tshape4,\r\n\tnormal,\r\n                tangent,\r\n\tscale\r\n\t)\r\n"
+  m_additionalIncludes:
+    m_additionalIncludes: []
+    m_outsideIncludes: []
+  m_additionalPragmas:
+    m_additionalPragmas: []
+    m_outsidePragmas: []
+  m_additionalDirectives:
+    m_validData: 0
+    m_isDirty: 1
+    m_moduleName: ' Additional Directives'
+    m_independentModule: 1
+    m_customEdited: 0
+    m_additionalDirectives:
+    - {fileID: 0}
+    m_shaderFunctionDirectives: []
+    m_nativeDirectives: []
+    m_nativeDirectivesIndex: -1
+    m_nativeDirectivesFoldout: 0
+    m_directivesSaveItems:
+    - LineType: 0
+      LineValue: Assets/AngryLabs/AudioBump/AudioBump.cginc
+      GUIDToggle: 0
+      GUIDValue: 
+      Origin: 2
+  m_nodeCategory: 3
+  m_customNodeCategory: 
+  m_previewPosition: 0
+  m_hidden: 0
+  m_url: 
