@@ -1,0 +1,28 @@
+{
+    "name": "Painted Metal 02",
+    "id": "painted-metal-02",
+    "scraper": "CgbookcaseScraper",
+    "fetchUrl": "https://www.cgbookcase.com/textures/painted-metal-02/",
+    "thumbnail": "thumb.jpg",
+    "variants": [
+        "1K",
+        "2K",
+        "3K",
+        "4K"
+    ],
+    "custom": {
+        "resolutions": [
+            "1K",
+            "2K",
+            "3K",
+            "4K"
+        ],
+        "files": {
+            "1K": "https://cgbookcase-volume.b-cdn.net/t/PaintedMetal02_MR_1K.zip",
+            "2K": "https://cgbookcase-volume.b-cdn.net/t/PaintedMetal02_MR_2K.zip",
+            "3K": "https://cgbookcase-volume.b-cdn.net/t/PaintedMetal02_MR_3K.zip",
+            "4K": "https://cgbookcase-volume.b-cdn.net/t/PaintedMetal02_MR_4K.zip"
+        },
+        "doublesided": false
+    }
+}

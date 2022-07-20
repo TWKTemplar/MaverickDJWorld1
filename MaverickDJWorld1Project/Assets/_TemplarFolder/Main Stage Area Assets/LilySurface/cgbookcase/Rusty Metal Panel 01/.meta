@@ -1,0 +1,28 @@
+{
+    "name": "Rusty Metal Panel 01",
+    "id": "rusty-metal-panel-01",
+    "scraper": "CgbookcaseScraper",
+    "fetchUrl": "https://www.cgbookcase.com/textures/rusty-metal-panel-01/",
+    "thumbnail": "thumb.jpg",
+    "variants": [
+        "1K",
+        "2K",
+        "3K",
+        "4K"
+    ],
+    "custom": {
+        "resolutions": [
+            "1K",
+            "2K",
+            "3K",
+            "4K"
+        ],
+        "files": {
+            "1K": "https://cgbookcase-volume.b-cdn.net/t/RustyMetalPanel01_MR_1K.zip",
+            "2K": "https://cgbookcase-volume.b-cdn.net/t/RustyMetalPanel01_MR_2K.zip",
+            "3K": "https://cgbookcase-volume.b-cdn.net/t/RustyMetalPanel01_MR_3K.zip",
+            "4K": "https://cgbookcase-volume.b-cdn.net/t/RustyMetalPanel01_MR_4K.zip"
+        },
+        "doublesided": false
+    }
+}
