@@ -1,0 +1,30 @@
+{
+    "name": "PaintedMetal016",
+    "id": "PaintedMetal016",
+    "scraper": "AmbientCgScraper",
+    "fetchUrl": "https://ambientcg.com/view?id=PaintedMetal016",
+    "thumbnail": "thumb.png",
+    "variants": [
+        "1K-JPG",
+        "2K-JPG",
+        "4K-JPG",
+        "8K-JPG",
+        "1K-PNG",
+        "2K-PNG",
+        "4K-PNG",
+        "8K-PNG"
+    ],
+    "custom": {
+        "variants_urls": [
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_1K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_2K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_4K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_8K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_1K-PNG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_2K-PNG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_4K-PNG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/PaintedMetal016_ovqyd2xh/PaintedMetal016_8K-PNG.zip"
+        ],
+        "thumbnail_url": "https://cdn3.struffelproductions.com/file/ambientCG/media/sphere/512-PNG/PaintedMetal016_PREVIEW.png"
+    }
+}

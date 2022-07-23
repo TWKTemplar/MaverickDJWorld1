@@ -1,0 +1,26 @@
+{
+    "name": "Metal003",
+    "id": "Metal003",
+    "scraper": "AmbientCgScraper",
+    "fetchUrl": "https://ambientcg.com/view?id=Metal003",
+    "thumbnail": "thumb.png",
+    "variants": [
+        "1K-JPG",
+        "2K-JPG",
+        "4K-JPG",
+        "1K-PNG",
+        "2K-PNG",
+        "4K-PNG"
+    ],
+    "custom": {
+        "variants_urls": [
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_1K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_2K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_4K-JPG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_1K-PNG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_2K-PNG.zip",
+            "https://cdn3.struffelproductions.com/file/ambientCG/download/Metal003_e7mdiz63/Metal003_4K-PNG.zip"
+        ],
+        "thumbnail_url": "https://cdn3.struffelproductions.com/file/ambientCG/media/sphere/512-PNG/Metal003_PREVIEW.png"
+    }
+}
