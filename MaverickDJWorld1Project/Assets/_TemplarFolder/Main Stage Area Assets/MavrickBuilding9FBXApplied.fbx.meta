@@ -1,0 +1,470 @@
+fileFormatVersion: 2
+guid: e66b3068a7d96654d882b4fc8ad62296
+ModelImporter:
+  serializedVersion: 19301
+  internalIDToNameTable:
+  - first:
+      74: 3386015221309346903
+    second: LeftSmallFan|Cube.002Action
+  - first:
+      74: 154383522729828996
+    second: LeftSmallFan|Cube.003Action
+  - first:
+      74: -2342569973482472523
+    second: LeftSmallFan|CylinderAction.002
+  - first:
+      74: 6588749505294724893
+    second: LeftSmallFan|CylinderAction.003
+  - first:
+      74: 7936231889022538607
+    second: LeftSmallFan|CylinderAction.007
+  - first:
+      74: -3865102625531036929
+    second: LeftSmallFan|CylinderAction.009
+  - first:
+      74: 8529938161583860018
+    second: LeftLargeFan|Cube.002Action
+  - first:
+      74: -3949775424688735346
+    second: LeftLargeFan|Cube.003Action
+  - first:
+      74: -5858878630106022333
+    second: LeftLargeFan|CylinderAction.002
+  - first:
+      74: 292971278169448255
+    second: LeftLargeFan|CylinderAction.003
+  - first:
+      74: -4997811683924824744
+    second: LeftLargeFan|CylinderAction.007
+  - first:
+      74: -3868504102436816605
+    second: LeftLargeFan|CylinderAction.009
+  - first:
+      74: 7756535205321752081
+    second: VIPRoomFan|Cube.002Action
+  - first:
+      74: 7533124889894497691
+    second: VIPRoomFan|Cube.003Action
+  - first:
+      74: 8800676784720151274
+    second: VIPRoomFan|CylinderAction.002
+  - first:
+      74: -367404720268069428
+    second: VIPRoomFan|CylinderAction.003
+  - first:
+      74: 7594149657008387418
+    second: VIPRoomFan|CylinderAction.007
+  - first:
+      74: 837900334228566684
+    second: VIPRoomFan|CylinderAction.009
+  - first:
+      74: 3389910697350476185
+    second: RightSmallFan|Cube.002Action
+  - first:
+      74: 2551437368304543315
+    second: RightSmallFan|Cube.003Action
+  - first:
+      74: 6211108369006482437
+    second: RightSmallFan|CylinderAction.002
+  - first:
+      74: 7139431647668263095
+    second: RightSmallFan|CylinderAction.003
+  - first:
+      74: -3316543179926356690
+    second: RightSmallFan|CylinderAction.007
+  - first:
+      74: 3246707946215626179
+    second: RightSmallFan|CylinderAction.009
+  - first:
+      74: 2511955268223134704
+    second: RightLargeFan|Cube.002Action
+  - first:
+      74: 6333794619348154235
+    second: RightLargeFan|Cube.003Action
+  - first:
+      74: 4893741177709035233
+    second: RightLargeFan|CylinderAction.002
+  - first:
+      74: 3451174491733910755
+    second: RightLargeFan|CylinderAction.003
+  - first:
+      74: 6629590033977242865
+    second: RightLargeFan|CylinderAction.007
+  - first:
+      74: 7631734061795094419
+    second: RightLargeFan|CylinderAction.009
+  - first:
+      74: 7645068437575977935
+    second: ScreenLeft|Cube.002Action
+  - first:
+      74: 9059243848824852399
+    second: ScreenLeft|Cube.003Action
+  - first:
+      74: -4301662795670085746
+    second: ScreenLeft|CylinderAction.002
+  - first:
+      74: -6014632738796338291
+    second: ScreenLeft|CylinderAction.003
+  - first:
+      74: -7891421950426256831
+    second: ScreenLeft|CylinderAction.007
+  - first:
+      74: -9039712642651689871
+    second: ScreenLeft|CylinderAction.009
+  - first:
+      74: -768699461811038149
+    second: ScreenRight|Cube.002Action
+  - first:
+      74: 3526029469825518569
+    second: ScreenRight|Cube.003Action
+  - first:
+      74: -7203145146813522
+    second: ScreenRight|CylinderAction.002
+  - first:
+      74: -3843088114690258377
+    second: ScreenRight|CylinderAction.003
+  - first:
+      74: -6982409336721536514
+    second: ScreenRight|CylinderAction.007
+  - first:
+      74: -8717855204648978591
+    second: ScreenRight|CylinderAction.009
+  - first:
+      74: -8142244703483435204
+    second: PistonBottom|Cube.002Action
+  - first:
+      74: -8471439774471066711
+    second: PistonBottom|Cube.003Action
+  - first:
+      74: -8433278331288532708
+    second: PistonBottom|CylinderAction.002
+  - first:
+      74: 925381543988717082
+    second: PistonBottom|CylinderAction.003
+  - first:
+      74: 3256063239503335345
+    second: PistonBottom|CylinderAction.007
+  - first:
+      74: 8886890027446724742
+    second: PistonBottom|CylinderAction.009
+  - first:
+      74: -9189224727377585785
+    second: PistonTop|Cube.002Action
+  - first:
+      74: 2370185819289684966
+    second: PistonTop|Cube.003Action
+  - first:
+      74: -8696362438176357581
+    second: PistonTop|CylinderAction.002
+  - first:
+      74: 119797418134106828
+    second: PistonTop|CylinderAction.003
+  - first:
+      74: 629533146016548651
+    second: PistonTop|CylinderAction.007
+  - first:
+      74: -5900232449744768936
+    second: PistonTop|CylinderAction.009
+  - first:
+      74: -2522206911976773054
+    second: PistonBotSideWays|Cube.002Action
+  - first:
+      74: -7171151516265238349
+    second: PistonBotSideWays|Cube.003Action
+  - first:
+      74: -3828750536086898350
+    second: PistonBotSideWays|CylinderAction.002
+  - first:
+      74: -5563192860359337710
+    second: PistonBotSideWays|CylinderAction.003
+  - first:
+      74: -3474309905403797000
+    second: PistonBotSideWays|CylinderAction.007
+  - first:
+      74: -3470794785728955663
+    second: PistonBotSideWays|CylinderAction.009
+  - first:
+      74: -6159200588140946947
+    second: PistonTopSideWays|Cube.002Action
+  - first:
+      74: 5674858722889149625
+    second: PistonTopSideWays|Cube.003Action
+  - first:
+      74: 705164242638826333
+    second: PistonTopSideWays|CylinderAction.002
+  - first:
+      74: -2480252684969930340
+    second: PistonTopSideWays|CylinderAction.003
+  - first:
+      74: -4882870773730890287
+    second: PistonTopSideWays|CylinderAction.007
+  - first:
+      74: -6026884467812216211
+    second: PistonTopSideWays|CylinderAction.009
+  - first:
+      74: 39851918796870908
+    second: PullAwayFloor|Cube.002Action
+  - first:
+      74: 8686056402009215244
+    second: PullAwayFloor|Cube.003Action
+  - first:
+      74: -9217698884925268463
+    second: PullAwayFloor|CylinderAction.002
+  - first:
+      74: 189712570346075014
+    second: PullAwayFloor|CylinderAction.003
+  - first:
+      74: 2063668249762376878
+    second: PullAwayFloor|CylinderAction.007
+  - first:
+      74: 7866786310459352217
+    second: PullAwayFloor|CylinderAction.009
+  - first:
+      74: 3115383773524823036
+    second: SlideUpStairs|Cube.002Action
+  - first:
+      74: -8648845858378789608
+    second: SlideUpStairs|Cube.003Action
+  - first:
+      74: 33004964456696821
+    second: SlideUpStairs|CylinderAction.002
+  - first:
+      74: 6466890594015867413
+    second: SlideUpStairs|CylinderAction.003
+  - first:
+      74: -4509614667060479032
+    second: SlideUpStairs|CylinderAction.007
+  - first:
+      74: -1080916577206187911
+    second: SlideUpStairs|CylinderAction.009
+  - first:
+      74: -8807200979910384018
+    second: SlideAwayFloors|Cube.002Action
+  - first:
+      74: 3630164478736088456
+    second: SlideAwayFloors|Cube.003Action
+  - first:
+      74: -3027560287908408037
+    second: SlideAwayFloors|CylinderAction.002
+  - first:
+      74: -3474255800464868862
+    second: SlideAwayFloors|CylinderAction.003
+  - first:
+      74: -4485317791867381269
+    second: SlideAwayFloors|CylinderAction.007
+  - first:
+      74: 8373216044609414872
+    second: SlideAwayFloors|CylinderAction.009
+  - first:
+      74: 8880092911847565600
+    second: SlideUpStairs.001|Cube.002Action
+  - first:
+      74: 9042079975766438397
+    second: SlideUpStairs.001|Cube.003Action
+  - first:
+      74: -8924842220488927039
+    second: SlideUpStairs.001|CylinderAction.002
+  - first:
+      74: -2920125414700616129
+    second: SlideUpStairs.001|CylinderAction.003
+  - first:
+      74: 2067987782472722500
+    second: SlideUpStairs.001|CylinderAction.007
+  - first:
+      74: -6283922022982929339
+    second: SlideUpStairs.001|CylinderAction.009
+  - first:
+      74: 6711820973059380299
+    second: SlideAwayFloors.001|Cube.002Action
+  - first:
+      74: 4305634894119959309
+    second: SlideAwayFloors.001|Cube.003Action
+  - first:
+      74: 8415631733342478916
+    second: SlideAwayFloors.001|CylinderAction.002
+  - first:
+      74: -902891989177410632
+    second: SlideAwayFloors.001|CylinderAction.003
+  - first:
+      74: -4654651841144318326
+    second: SlideAwayFloors.001|CylinderAction.007
+  - first:
+      74: 5372522888191944247
+    second: SlideAwayFloors.001|CylinderAction.009
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Gold
+    second: {fileID: 2100000, guid: a84b23c5d682ba44188a03c208360f77, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: PROXIMA1
+    second: {fileID: 2100000, guid: 5087b0df737dd6347be5e3d49fd3c4b9, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: RGB
+    second: {fileID: 2100000, guid: 1d32e10ad352c014a85525a63b1ca734, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Ref2
+    second: {fileID: 2100000, guid: a32354a87e0901044bde28fe03429325, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Steel Grey
+    second: {fileID: 2100000, guid: 98c8129a409b36d4ebe472b49f007d28, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Steel Hard Black
+    second: {fileID: 2100000, guid: bc5f19bf63abc2a4896bc73fc86b343e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Steel Light Grey
+    second: {fileID: 2100000, guid: e4bf2996b7b307e4682bc30663711158, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Video
+    second: {fileID: 2100000, guid: fb0b96be6dcd55740b42f970b62c1f1e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ambientCG_Metal003_1K-JPG
+    second: {fileID: 2100000, guid: f2e8e6cbac2f342408f192305be84f5b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ambientCG_MetalPlates010_1K-JPG
+    second: {fileID: 2100000, guid: e3211a9a6d027ae41869c7b082601a6a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ambientCG_MetalWalkway012_1K-JPG
+    second: {fileID: 2100000, guid: c5474e20bb65aae4bb298c1f1edcc3eb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: ambientCG_PaintedMetal016_1K-JPG
+    second: {fileID: 2100000, guid: 3e1ad67f810942047abe22d397d0e46c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cgbookcase_Dirty Metal Weave 03_1K
+    second: {fileID: 2100000, guid: cbbfd8c37ec9ee04391171776d870d21, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cgbookcase_Painted Metal 01_1K
+    second: {fileID: 2100000, guid: 35ac7269d2107bc488da9648692e32e3, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cgbookcase_Painted Metal 02_1K
+    second: {fileID: 2100000, guid: 173e1cc34a9f14e4a8b2563e7e7c2e10, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cgbookcase_Painted Metal 03_1K
+    second: {fileID: 2100000, guid: 1749e00e4f2a26e409f2ee76e5e1ec8d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: cgbookcase_Rusty Metal Panel 01_1K
+    second: {fileID: 2100000, guid: 6e99f54159faf0b459cc91392710487b, type: 2}
+  materials:
+    materialImportMode: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    useSRGBMaterialColor: 1
+    sortHierarchyByName: 1
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    fileIdsGeneration: 2
+    swapUVChannels: 0
+    generateSecondaryUV: 1
+    useFileUnits: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    skinWeightsMode: 0
+    maxBonesPerVertex: 4
+    minBoneWeight: 0.001
+    meshOptimizationFlags: -1
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+    legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
+    blendShapeNormalImportMode: 1
+    normalSmoothingSource: 0
+  referencedClips: []
+  importAnimation: 1
+  humanDescription:
+    serializedVersion: 3
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    globalScale: 1
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  autoGenerateAvatarMappingIfUnspecified: 1
+  animationType: 2
+  humanoidOversampling: 1
+  avatarSetup: 0
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
