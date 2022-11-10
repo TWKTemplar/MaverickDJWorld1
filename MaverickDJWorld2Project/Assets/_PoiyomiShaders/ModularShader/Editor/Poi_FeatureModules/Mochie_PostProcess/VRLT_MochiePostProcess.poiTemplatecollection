@@ -1,0 +1,127 @@
+#T#MochiePostProcessProperties
+
+[HideInInspector] m_start_postprocess ("Post Processing--{reference_property:_PostProcess}", Float) = 0
+[HideInInspector][ThryToggle(MOCHIE_POSTPROCESS)]_PostProcess ("Enable", Float) = 0
+[ThryTexture] _PPMask("Mask--{reference_properties:[_PPMaskPan, _PPMaskUV, _PPMaskInvert]}", 2D) = "white" { }
+[HideInInspector][Vector2]_PPMaskPan ("Panning", Vector) = (0, 0, 0, 0)
+[HideInInspector][ToggleUI]_PPMaskInvert ("Invert", Float) = 0
+[HideInInspector][ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3, Panosphere, 4, World Pos XZ, 5, Polar UV, 6, Distorted UV, 7)]_PPMaskUV ("UV", Int) = 0
+
+[NoScaleOffset][ThryTexture] _PPLUT("LUT", 2D) = "white" {}
+_PPLUTStrength("LUT Strength", Range(0,1)) = 0
+_PPHue("Hue", Range(0,1)) = 0
+[HDR]_PPTint("Tint", Color) = (1,1,1,1)
+[Vector3]_PPRGB("RGB", Vector) = (1,1,1,1)
+_PPContrast("Contrast", Float) = 1
+_PPSaturation("Saturation", Float) = 1
+_PPBrightness("Brightness", Float) = 1
+_PPLightness("Lightness", Float) = 0
+_PPHDR("HDR", Float) = 0
+
+[HideInInspector] m_end_postprocess ("", Float) = 0
+
+#T#MochiePostProcessKeywords
+#pragma shader_feature_local MOCHIE_POSTPROCESS
+
+#T#MochiePostProcessVariables
+#ifdef MOCHIE_POSTPROCESS
+    #if defined(PROP_PPLUT) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _PPLUT;
+        SamplerState sampler_PPLUT;
+    #endif
+    float4 _PPLUT_TexelSize;
+    float _PPLUTStrength;
+
+	#if defined(PROP_PPMASK) || !defined(OPTIMIZER_ENABLED)
+		Texture2D _PPMask;
+	#endif
+    float4 _PPMask_ST;
+    float2 _PPMaskPan;
+    float _PPMaskUV;
+    float _PPMaskInvert;
+
+    float3 _PPTint;
+    float3 _PPRGB;
+    float _PPHue;
+    float _PPContrast;
+    float _PPSaturation;
+    float _PPBrightness;
+    float _PPLightness;
+    float _PPHDR;
+    const static float COLORS = 32;
+
+#endif
+
+
+#T#MochiePostProcessFunctions
+#ifdef MOCHIE_POSTPROCESS
+    float oetf_sRGB_scalar(float L) {
+        float V = 1.055 * (pow(L, 1.0 / 2.4)) - 0.055;
+        if (L <= 0.0031308)
+            V = L * 12.92;
+        return V;
+    }
+
+    float3 oetf_sRGB(float3 L) {
+        return float3(oetf_sRGB_scalar(L.r), oetf_sRGB_scalar(L.g), oetf_sRGB_scalar(L.b));
+    }
+
+    float eotf_sRGB_scalar(float V) {
+        float L = pow((V + 0.055) / 1.055, 2.4);
+        if (V <= oetf_sRGB_scalar(0.0031308))
+            L = V / 12.92;
+        return L;
+    }
+
+    float3 GetHDR(float3 rgb) {
+        return float3(eotf_sRGB_scalar(rgb.r), eotf_sRGB_scalar(rgb.g), eotf_sRGB_scalar(rgb.b));
+    }
+
+    float3 GetContrast(float3 col, float contrast){
+        return lerp(float3(0.5,0.5,0.5), col, contrast);
+    }
+
+    float3 GetSaturation(float3 col, float interpolator){
+        return lerp(dot(col, float3(0.3,0.59,0.11)), col, interpolator);
+    }
+
+    void applyPostProcessing(inout PoiFragData poiFragData, in PoiMesh poiMesh)
+    {
+        float3 col = poiFragData.finalColor;
+        col = hueShift(col, _PPHue);
+        col *= _PPTint;
+        col *= _PPRGB;
+        col = GetSaturation(col, _PPSaturation);
+        col = lerp(col, GetHDR(col), _PPHDR);
+        col = GetContrast(col, _PPContrast);
+        col *= _PPBrightness;
+        col += _PPLightness;
+
+        #if defined(PROP_PPLUT) || !defined(OPTIMIZER_ENABLED)
+            float3 satCol = saturate(col);
+            float maxColor = COLORS - 1.0;
+            float halfColX = 0.5 / _PPLUT_TexelSize.z;
+            float halfColY = 0.5 / _PPLUT_TexelSize.w;
+            float threshold = maxColor / COLORS;
+            float xOffset = halfColX + satCol.r * threshold / COLORS;
+            float yOffset = halfColY + satCol.g * threshold;
+            float cell = floor(satCol.b * maxColor);
+            float2 lutUV = float2(cell / COLORS + xOffset, yOffset);
+            float3 lutSample = _PPLUT.Sample(sampler_PPLUT, lutUV);
+            col = lerp(col, lutSample, _PPLUTStrength);
+        #endif
+        
+        #if defined(PROP_PPMASK) || !defined(OPTIMIZER_ENABLED)
+            float ppMask = POI2D_SAMPLER_PAN(_PPMask, _MainTex, poiUV(poiMesh.uv[_PPMaskUV], _PPMask_ST), _PPMaskPan).r;
+            ppMask = lerp(ppMask, 1-ppMask, _PPMaskInvert);
+            col = lerp(poiFragData.finalColor, col, ppMask);
+        #endif
+
+        poiFragData.finalColor = col;
+    }
+#endif
+
+#T#MochiePostProcessFunctionCalls
+#ifdef MOCHIE_POSTPROCESS
+    applyPostProcessing(poiFragData, poiMesh);
+#endif

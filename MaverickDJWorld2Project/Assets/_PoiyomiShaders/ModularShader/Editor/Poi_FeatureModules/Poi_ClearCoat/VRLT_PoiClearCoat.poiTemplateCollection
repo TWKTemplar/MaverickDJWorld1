@@ -1,0 +1,149 @@
+#T#PoiClearCoatProperties
+
+[HideInInspector] m_start_clearCoat ("Clear Coat--{reference_property:_EnableClearCoat}", Float) = 0
+[HideInInspector][ThryToggle(_COLORCOLOR_ON)]_EnableClearCoat ("Enable Clear Coat", Float) = 0
+_ClearCoatSmoothnessMap ("Smoothness Map--{reference_properties:[_ClearCoatSmoothnessMapPan, _ClearCoatSmoothnessMapUV, _ClearCoatInvertSmoothness]}", 2D) = "white" { }
+[HideInInspector][Vector2]_ClearCoatSmoothnessMapPan ("Panning", Vector) = (0, 0, 0, 0)
+[HideInInspector][ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3, Panosphere, 4, World Pos XZ, 5, Polar UV, 6, Distorted UV, 7)]_ClearCoatSmoothnessMapUV ("UV", Int) = 0
+[HideInInspector][ToggleUI]_ClearCoatInvertSmoothness ("Invert Smoothness", Range(0, 1)) = 0
+
+_ClearCoatMask ("Mask--{reference_properties:[_ClearCoatMaskPan, _ClearCoatMaskUV]}", 2D) = "white" { }
+[HideInInspector][Vector2]_ClearCoatMaskPan ("Panning", Vector) = (0, 0, 0, 0)
+[HideInInspector][ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3, Panosphere, 4, World Pos XZ, 5, Polar UV, 6, Distorted UV, 7)]_ClearCoatMaskUV ("UV", Int) = 0
+
+[NoScaleOffset]_ClearCoatCubeMap ("Fallback Cubemap", Cube) = "" { }
+
+[ThryWideEnum(Vertex, 0, Pixel, 1)]_ClearCoatNormal("Normal Select", Int) = 0
+
+_ClearCoatTint ("Reflection Tint--{reference_property:_ClearCoatTintThemeIndex}", Color) = (1, 1, 1)
+[HideInInspector][ThryWideEnum(Off, 0, Theme Color 0, 1, Theme Color 1, 2, Theme Color 2, 3, Theme Color 3, 4, ColorChord 0, 5, ColorChord 1, 6, ColorChord 2, 7, ColorChord 3, 8, AL Theme 0, 9, AL Theme 1, 10, AL Theme 2, 11, AL Theme 3, 12)] _ClearCoatTintThemeIndex ("", Int) = 0
+_ClearCoat ("Clear Coat", Range(0, 1)) = 1
+_ClearCoatSmoothness ("Smoothness", Range(0, 1)) = 0
+[ToggleUI]_ClearCoatSampleWorld ("World Reflections", Int) = 1
+[ToggleUI]_ClearCoatForceLighting ("Force Lighting", Int) = 0
+[HideInInspector] m_end_clearCoat ("Clear Coat", Float) = 0
+
+#T#PoiClearCoatKeywords
+#pragma shader_feature_local _COLORCOLOR_ON
+
+#T#PoiClearCoatVariables
+#ifdef _COLORCOLOR_ON
+    samplerCUBE _ClearCoatCubeMap;
+    float _ClearCoatSampleWorld;
+    #if defined(PROP_CLEARCOATMASK) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _ClearCoatMask;
+    #endif
+    float4 _ClearCoatMask_ST;
+    float2 _ClearCoatMaskPan;
+    float _ClearCoatMaskUV;
+    #if defined(PROP_CLEARCOATSMOOTHNESSMAP) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _ClearCoatSmoothnessMap;
+    #endif
+    float _ClearCoatNormal;
+    float4 _ClearCoatSmoothnessMap_ST;
+    float2 _ClearCoatSmoothnessMapPan;
+    float _ClearCoatSmoothnessMapUV;
+    float _ClearCoatInvertSmoothness;
+    float _ClearCoat;
+    float _ClearCoatSmoothness;
+    float3 _ClearCoatTint;
+    float _ClearCoatTintThemeIndex;
+    float _ClearCoatForceLighting;
+    float lighty_clear_boy_uwu_var;
+#endif
+
+#T#PoiClearCoatFunctions
+#ifdef _COLORCOLOR_ON
+    float3 CalculateClearCoatEnvironmentalReflections(PoiMesh poiMesh, PoiCam poiCam, PoiLight poiLight, PoiMods poiMods)
+    {
+        float3 reflectionColor;
+
+        #if defined(PROP_CLEARCOATSMOOTHNESSMAP) || !defined(OPTIMIZER_ENABLED)
+            float smoothnessMap = (POI2D_SAMPLER_PAN(_ClearCoatSmoothnessMap, _MainTex, poiMesh.uv[_ClearCoatSmoothnessMapUV], _ClearCoatSmoothnessMapPan));
+        #else
+            float smoothnessMap = 1;
+        #endif
+
+        if (_ClearCoatInvertSmoothness == 1)
+        {
+            smoothnessMap = 1 - smoothnessMap;
+        }
+        smoothnessMap *= _ClearCoatSmoothness;
+        float roughness = (1 - smoothnessMap) * (1 - _ClearCoatSmoothness);
+        
+        lighty_clear_boy_uwu_var = 0;
+        
+        float3 reflectedDir = reflect(-poiCam.viewDir, poiMesh.normals[_ClearCoatNormal]);;
+        
+        float4 envSample = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectedDir, roughness * UNITY_SPECCUBE_LOD_STEPS);
+        bool no_probe = unity_SpecCube0_HDR.a == 0 && envSample.a == 0;
+        
+        UNITY_BRANCH
+        if (_ClearCoatSampleWorld == 1 && no_probe == 0)
+        {
+            
+            Unity_GlossyEnvironmentData envData;
+            envData.roughness = roughness;
+            envData.reflUVW = BoxProjection(
+                reflectedDir, poiMesh.worldPos.xyz,
+                unity_SpecCube0_ProbePosition,
+                unity_SpecCube0_BoxMin, unity_SpecCube0_BoxMax
+            );
+            float3 probe0 = Unity_GlossyEnvironment(
+                UNITY_PASS_TEXCUBE(unity_SpecCube0), unity_SpecCube0_HDR, envData
+            );
+            envData.reflUVW = BoxProjection(
+                reflectedDir, poiMesh.worldPos.xyz,
+                unity_SpecCube1_ProbePosition,
+                unity_SpecCube1_BoxMin, unity_SpecCube1_BoxMax
+            );
+            
+            float interpolator = unity_SpecCube0_BoxMin.w;
+            UNITY_BRANCH
+            if (interpolator < 0.99999)
+            {
+                float3 probe1 = Unity_GlossyEnvironment(
+                    UNITY_PASS_TEXCUBE_SAMPLER(unity_SpecCube1, unity_SpecCube0),
+                    unity_SpecCube0_HDR, envData
+                );
+                reflectionColor = lerp(probe1, probe0, interpolator);
+            }
+            else
+            {
+                reflectionColor = probe0;
+            }
+        }
+        else
+        {
+            lighty_clear_boy_uwu_var = 1;
+            reflectionColor = texCUBElod(_ClearCoatCubeMap, float4(reflectedDir, roughness * UNITY_SPECCUBE_LOD_STEPS));
+        }
+        
+        if (_ClearCoatForceLighting)
+        {
+            lighty_clear_boy_uwu_var = 1;
+        }
+        
+        return reflectionColor * poiThemeColor(poiMods, _ClearCoatTint, _ClearCoatTintThemeIndex);
+    }
+    
+    void calculateAndApplyClearCoat(inout PoiFragData poiFragData, in PoiMesh poiMesh, in PoiCam poiCam, in PoiLight poiLight, in PoiMods poiMods)
+    {
+        #if defined(PROP_CLEARCOATMASK) || !defined(OPTIMIZER_ENABLED)
+            float clearCoatMap = POI2D_SAMPLER_PAN(_ClearCoatMask, _MainTex, poiUV(poiMesh.uv[_ClearCoatMaskUV], _ClearCoatMask_ST), _ClearCoatMaskPan);
+        #else
+            float clearCoatMap = 1;
+        #endif
+        
+        float3 reflectionColor = CalculateClearCoatEnvironmentalReflections(poiMesh, poiCam, poiLight, poiMods);
+        float nDotV = dot(poiMesh.normals[_ClearCoatNormal], poiCam.viewDir);
+        float NormalDotView = abs(dot(_ClearCoat, nDotV).r);
+        poiFragData.finalColor += reflectionColor * lerp(1, poiLight.finalLighting, lighty_clear_boy_uwu_var) * (clearCoatMap * _ClearCoat * clamp(FresnelTerm(_ClearCoat, NormalDotView), 0, 1));
+    }
+#endif
+
+#T#PoiClearCoatFunctionCalls
+#ifdef _COLORCOLOR_ON
+    calculateAndApplyClearCoat(poiFragData, poiMesh, poiCam, poiLight, poiMods);
+#endif
+

@@ -1,0 +1,86 @@
+#T#PoiUDIMDiscardProperties 
+// SPECIALFX_PROPERTIES
+
+// UDIM Discard
+[HideInInspector] m_start_udimdiscardOptions ("UDIM Discard--{reference_property:_EnableUDIMDiscardOptions}", Float) = 0
+[HideInInspector][ThryToggle(POI_UDIMDISCARD)]_EnableUDIMDiscardOptions ("Enable UDIM Discard Options", Float) = 0
+[ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_UDIMDiscardUV ("Discard UV", Int) = 0
+[Enum(Vertex, 0, Pixel, 1)] _UDIMDiscardMode ("Discard Mode", Int) = 1
+[Vector4Toggles]_UDIMDiscardRow3 ("y = 3", Vector) = (1,1,1,1)
+[Vector4Toggles]_UDIMDiscardRow2 ("y = 2", Vector) = (1,1,1,1)
+[Vector4Toggles]_UDIMDiscardRow1 ("y = 1", Vector) = (1,1,1,1)
+[Vector4Toggles]_UDIMDiscardRow0 ("y = 0", Vector) = (1,1,1,1)
+[HideInInspector] m_end_udimdiscardOptions ("UDIM Discard", Float) = 0
+
+#T#PoiUDIMDiscardKeywords
+#pragma shader_feature_local POI_UDIMDISCARD 
+
+#T#PoiUDIMDiscardVariables
+#ifdef POI_UDIMDISCARD 
+	float _UDIMDiscardMode;
+    float _UDIMDiscardUV;
+    float4 _UDIMDiscardRow3;
+	float4 _UDIMDiscardRow2;
+	float4 _UDIMDiscardRow1;
+	float4 _UDIMDiscardRow0;
+#endif
+
+#T#PoiUDIMDiscardVertexImplementation 
+#ifdef POI_UDIMDISCARD 
+	UNITY_BRANCH
+	if(_UDIMDiscardMode == 0) // Discard Vertices instead of just pixels
+	{
+        // Branchless (inspired by s-ilent)
+        float2 udim = 0; 
+        // Select UV
+        udim += (v.uv0.xy * (_UDIMDiscardUV == 0));
+        udim += (v.uv1.xy * (_UDIMDiscardUV == 1));
+        udim += (v.uv2.xy * (_UDIMDiscardUV == 2));
+        udim += (v.uv3.xy * (_UDIMDiscardUV == 3));
+
+    	float isRendered = 0;
+    	float4 xMask = float4(  (udim.x >= 0 && udim.x < 1), 
+    							(udim.x >= 1 && udim.x < 2),
+    							(udim.x >= 2 && udim.x < 3),
+    							(udim.x >= 3 && udim.x < 4));
+
+    	isRendered += (udim.y >= 0 && udim.y < 1) * dot(_UDIMDiscardRow0, xMask);
+       	isRendered += (udim.y >= 1 && udim.y < 2) * dot(_UDIMDiscardRow1, xMask);
+    	isRendered += (udim.y >= 2 && udim.y < 3) * dot(_UDIMDiscardRow2, xMask);
+    	isRendered += (udim.y >= 3 && udim.y < 4) * dot(_UDIMDiscardRow3, xMask);
+    	isRendered += (udim.y < 0 || udim.y >= 4) + (udim.x < 0 || udim.x >= 4); // never discard outside 4x4 grid in pos coords 
+
+    	if(!isRendered) v.vertex = 0.0/0.0; // NaN position to discard; GPU discards degenerate geometry. thanks bgolus
+	}
+#endif
+
+#T#PoiUDIMDiscardFragFunctions
+#ifdef POI_UDIMDISCARD 
+    void applyUDIMDiscard(inout PoiFragData poiFragData, in PoiMesh poiMesh)
+    {
+    	float2 udim = floor(poiMesh.uv[_UDIMDiscardUV].xy);
+    	
+    	float isRendered = 0;
+    	float4 xMask = float4(  (udim.x >= 0 && udim.x < 1), 
+    							(udim.x >= 1 && udim.x < 2),
+    							(udim.x >= 2 && udim.x < 3),
+    							(udim.x >= 3 && udim.x < 4));
+
+    	isRendered += (udim.y >= 0 && udim.y < 1) * dot(_UDIMDiscardRow0, xMask);
+       	isRendered += (udim.y >= 1 && udim.y < 2) * dot(_UDIMDiscardRow1, xMask);
+    	isRendered += (udim.y >= 2 && udim.y < 3) * dot(_UDIMDiscardRow2, xMask);
+    	isRendered += (udim.y >= 3 && udim.y < 4) * dot(_UDIMDiscardRow3, xMask);
+    	isRendered += (udim.y < 0 || udim.y >= 4) + (udim.x < 0 || udim.x >= 4); // never discard outside 4x4 grid in pos coords 
+
+    	if(!isRendered) discard;
+
+    	return;
+    }
+#endif
+
+
+
+#T#PoiUDIMDiscardFragFunctionCalls 
+#ifdef POI_UDIMDISCARD 
+    applyUDIMDiscard(poiFragData, poiMesh);
+#endif

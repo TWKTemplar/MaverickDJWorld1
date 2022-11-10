@@ -1,0 +1,144 @@
+#T#PoiRimLightProperties
+// Rim Lighting
+[HideInInspector] m_start_rimLightOptions ("Rim Lighting--{reference_property:_EnableRimLighting}", Float) = 0
+[HideInInspector][ThryToggle(_GLOSSYREFLECTIONS_OFF)]_EnableRimLighting ("Enable Rim Lighting", Float) = 0
+[Enum(vertex, 0, pixel, 1)] _RimLightNormal ("Normal Select", Int) = 1
+[ToggleUI]_RimLightingInvert ("Invert Rim Lighting", Float) = 0
+_RimLightColor ("Rim Color--{reference_property:_RimLightColorThemeIndex}", Color) = (1, 1, 1, 1)
+[HideInInspector][ThryWideEnum(Off, 0, Theme Color 0, 1, Theme Color 1, 2, Theme Color 2, 3, Theme Color 3, 4, ColorChord 0, 5, ColorChord 1, 6, ColorChord 2, 7, ColorChord 3, 8, AL Theme 0, 9, AL Theme 1, 10, AL Theme 2, 11, AL Theme 3, 12)] _RimLightColorThemeIndex ("", Int) = 0
+_RimWidth ("Rim Width", Range(0, 1)) = 0.8
+_RimSharpness ("Rim Sharpness", Range(0, 1)) = .25
+_RimStrength ("Rim Emission", Range(0, 20)) = 0
+_RimBrighten ("Rim Color Brighten", Range(0, 3)) = 0
+_RimLightColorBias ("Rim Color Bias", Range(0, 1)) = 1
+_RimTex ("Rim Texture--{reference_properties:[_RimTexPan, _RimTexUV]}", 2D) = "white" { }
+[HideInInspector][Vector2]_RimTexPan ("Panning", Vector) = (0, 0, 0, 0)
+[HideInInspector][ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3, Panosphere, 4, World Pos XZ, 5, Polar UV, 6, Distorted UV, 7)] _RimTexUV ("UV", Int) = 0
+_RimMask ("Rim Mask--{reference_properties:[_RimMaskPan, _RimMaskUV]}", 2D) = "white" { }
+[HideInInspector][Vector2]_RimMaskPan ("Panning", Vector) = (0, 0, 0, 0)
+[HideInInspector][ThryWideEnum(UV0, 0, UV1, 1, UV2, 2, UV3, 3, Panosphere, 4, World Pos XZ, 5, Polar UV, 6, Distorted UV, 7)] _RimMaskUV ("UV", Int) = 0
+
+[Space(10)]
+[ThryToggleUI(true)] _RimHueShiftEnabled ("<size=13><b>  Hue Shift</b></size>", Float) = 0
+_RimHueShiftSpeed ("Shift Speed--{condition_showS:(_RimHueShiftEnabled==1)}", Float) = 0
+_RimHueShift ("Hue Shift--{condition_showS:(_RimHueShiftEnabled==1)}", Range(0, 1)) = 0
+[HideInInspector] m_end_rimLightOptions ("Rim Lighting", Float) = 0
+
+#T#PoiRimLightKeywords
+#pragma shader_feature _GLOSSYREFLECTIONS_OFF
+
+#T#PoiRimLightVariables
+#ifdef _GLOSSYREFLECTIONS_OFF
+    float4 _RimLightColor;
+    float _RimLightingInvert;
+    float _RimWidth;
+    float _RimStrength;
+    float _RimSharpness;
+    float _RimLightColorBias;
+    float _ShadowMix;
+    float _ShadowMixThreshold;
+    float _ShadowMixWidthMod;
+    float _EnableRimLighting;
+    float _RimBrighten;
+    float _RimLightNormal;
+    float _RimHueShiftEnabled;
+    float _RimHueShiftSpeed;
+    float _RimHueShift;
+    float _RimWidthNoiseStrength;
+    float _RimLightColorThemeIndex;
+
+    #if defined(PROP_RIMTEX) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _RimTex;
+    #endif
+    float4 _RimTex_ST;
+    float2 _RimTexPan;
+    float _RimTexUV;
+    #if defined(PROP_RIMMASK) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _RimMask;
+    #endif
+    float4 _RimMask_ST;
+    float2 _RimMaskPan;
+    float _RimMaskUV;
+    #if defined(PROP_RIMWIDTHNOISETEXTURE) || !defined(OPTIMIZER_ENABLED)
+        Texture2D _RimWidthNoiseTexture;
+    #endif
+    float4 _RimWidthNoiseTexture_ST;
+    float2 _RimWidthNoiseTexturePan;
+    float _RimWidthNoiseTextureUV;
+
+#endif
+
+/*
+Texture2D ;
+float4 _ST;
+float2 Pan;
+float UV;
+*/
+
+#T#PoiRimLightFunction
+#ifdef _GLOSSYREFLECTIONS_OFF
+    void ApplyRimLighting(inout PoiFragData poiFragData, in PoiMesh poiMesh, in PoiCam poiCam, in PoiLight poiLight, in PoiMods poiMods)
+    {
+        #if defined(PROP_RIMWIDTHNOISETEXTURE) || !defined(OPTIMIZER_ENABLED)
+            float rimNoise = POI2D_SAMPLER_PAN(_RimWidthNoiseTexture, _MainTex, poiUV(poiMesh.uv[_RimWidthNoiseTextureUV], _RimWidthNoiseTexture_ST), _RimWidthNoiseTexturePan);
+        #else
+            float rimNoise = 0;
+        #endif
+
+        rimNoise = (rimNoise - .5) * _RimWidthNoiseStrength;
+        
+        float viewDotNormal = saturate(abs(dot(poiCam.viewDir, poiMesh.normals[_RimLightNormal])));
+
+        UNITY_BRANCH
+        if (_RimLightingInvert)
+        {
+            viewDotNormal = 1 - viewDotNormal;
+        }
+        float rimStrength = _RimStrength;
+        float rimBrighten = _RimBrighten;
+
+        float rimWidth = lerp( - .05, 1, _RimWidth);
+        /*
+        #ifdef COLOR_GRADING_LOG_VIEW
+            UNITY_BRANCH
+            if (poiMods.audioLinkAvailable)
+            {
+                rimWidth = clamp(rimWidth + lerp(_AudioLinkRimWidthAdd.x, _AudioLinkRimWidthAdd.y, poiMods.audioLink[_AudioLinkRimWidthBand]), - .05, 1);
+                rimStrength += lerp(_AudioLinkRimEmissionAdd.x, _AudioLinkRimEmissionAdd.y, poiMods.audioLink[_AudioLinkRimEmissionBand]);
+                rimBrighten += lerp(_AudioLinkRimBrightnessAdd.x, _AudioLinkRimBrightnessAdd.y, poiMods.audioLink[_AudioLinkRimBrightnessBand]);
+            }
+        #endif
+        */
+
+        rimWidth -= rimNoise;
+        #if defined(PROP_RIMMASK) || !defined(OPTIMIZER_ENABLED)
+            float rimMask = POI2D_SAMPLER_PAN(_RimMask, _MainTex, poiUV(poiMesh.uv[_RimMaskUV], _RimMask_ST), _RimMaskPan);
+        #else
+            float rimMask = 1;
+        #endif
+        
+        #if defined(PROP_RIMTEX) || !defined(OPTIMIZER_ENABLED)
+            float4 rimColor = POI2D_SAMPLER_PAN(_RimTex, _MainTex, poiUV(poiMesh.uv[_RimTexUV], _RimTex_ST), _RimTexPan) * float4(poiThemeColor(poiMods, _RimLightColor.rgb, _RimLightColorThemeIndex), _RimLightColor.a);
+        #else
+            float4 rimColor = float4(poiThemeColor(poiMods, _RimLightColor.rgb, _RimLightColorThemeIndex), _RimLightColor.a);
+        #endif
+        
+        UNITY_BRANCH
+        if (_RimHueShiftEnabled)
+        {
+            rimColor.rgb = hueShift(rimColor.rgb, _RimHueShift + _Time.x * _RimHueShiftSpeed);
+        }
+        
+        rimWidth = max(lerp(rimWidth, rimWidth * lerp(0, 1, poiLight.lightMap - _ShadowMixThreshold) * _ShadowMixWidthMod, _ShadowMix), 0);
+        float rim = 1 - smoothstep(min(_RimSharpness, rimWidth), rimWidth, viewDotNormal);
+        rim *= _RimLightColor.a * rimColor.a * rimMask;
+        poiFragData.emission += rim * lerp(poiFragData.baseColor, rimColor, _RimLightColorBias) * rimStrength;
+        poiFragData.baseColor = lerp(poiFragData.baseColor, lerp(poiFragData.baseColor, rimColor, _RimLightColorBias) + lerp(poiFragData.baseColor, rimColor, _RimLightColorBias) * rimBrighten, rim);
+    }
+#endif
+
+#T#PoiRimLightFunctionCall
+#ifdef _GLOSSYREFLECTIONS_OFF
+    ApplyRimLighting(poiFragData, poiMesh, poiCam, poiLight, poiMods);
+#endif
+
